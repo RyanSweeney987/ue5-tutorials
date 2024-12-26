@@ -1,5 +1,3 @@
-### Important: This works with the deferred renderer only!
-
 [![Sweenus987 on YouTube](https://img.youtube.com/vi/toYXfFrmXbk/0.jpg)](https://youtu.be/toYXfFrmXbk "Create a Compute Shader - UE5 C++ Tutorial")
 
 //-----------------------------------------------------
