@@ -23,13 +23,20 @@ public class UE5_Tut_3_Compute_Shaders : ModuleRules
 			}
 			);
 			
+		if(Target.Version is { MajorVersion: 5, MinorVersion: > 5 })
+		{
+			PrivateIncludePaths.AddRange(
+				new string[] {
+					Path.Combine(GetModuleDirectory("Renderer"), "Internal"),
+				}
+			);
+		}
 		
 		PublicDependencyModuleNames.AddRange(
 			new string[]
 			{
 				"Core",
-				"Engine", 
-				"UE5ShaderUtils", 
+				"Engine"
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -45,8 +52,7 @@ public class UE5_Tut_3_Compute_Shaders : ModuleRules
 				"Projects",
 				"RHI",
 				"Renderer",
-				"RenderCore",
-				"UE5ShaderUtils" 
+				"RenderCore"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

@@ -6,7 +6,6 @@
 #include "DataDrivenShaderPlatformInfo.h"
 #include "SceneTexturesConfig.h"
 #include "PostProcess/PostProcessInputs.h"
-#include "RenderPasses/ComputePassBase.h"
 
 namespace ColourReplaceCompute
 {
