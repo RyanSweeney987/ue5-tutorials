@@ -58,5 +58,7 @@ class FColourExtractPS : public FGlobalShader
 		const bool BoolValue = PermutationVector.Get<FBoolPermutation>();
 		// Set the define based on the bool permutation value
 		OutEnvironment.SetDefine(TEXT("USE_UNLIT_SCENE_COLOUR"), BoolValue);
+		// Normally you would do something like the following and add it to the TShaderPermutationDomain<...> list above
+		// class FUnlitScenePermutation : SHADER_PERMUTATION_BOOL("USE_UNLIT_SCENE_COLOUR");
 	}
 };
