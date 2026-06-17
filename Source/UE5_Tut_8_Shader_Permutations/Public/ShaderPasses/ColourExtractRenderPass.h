@@ -35,7 +35,7 @@ class FColourExtractPS : public FGlobalShader
 	// Create a permutation domain that combines the permutations
 	// There is an upper limit to the permutations set in the engine code
 	using FPermutationDomain = TShaderPermutationDomain<FBoolPermutation, FIntPermutation, FIntRangePermutation, FSparseIntPermutation, FEnumPermutation>;
-	
+		
 	// The following macros can be used for the permutations and are found in ShaderPermutation.h
 	// SHADER_PERMUTATION_BOOL("BOOL_DEFINE")
 	// SHADER_PERMUTATION_INT("INT_DEFINE", 2, 3)
@@ -59,6 +59,6 @@ class FColourExtractPS : public FGlobalShader
 		// Set the define based on the bool permutation value
 		OutEnvironment.SetDefine(TEXT("USE_UNLIT_SCENE_COLOUR"), BoolValue);
 		// Normally you would do something like the following and add it to the TShaderPermutationDomain<...> list above
-		// class FUnlitScenePermutation : SHADER_PERMUTATION_BOOL("USE_UNLIT_SCENE_COLOUR");
+		// class FUnlitScenePermutation : SHADER_PERMUTATION_BOOL("USE_UNLIT_SCENE_COLOUR");		
 	}
 };
