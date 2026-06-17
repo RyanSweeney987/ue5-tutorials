@@ -1,2 +1,3 @@
-# ue5-tutorials
-Repository containing all of the YouTube tutorial code
+# Unreal Engine 5 C++ Tutorials
+This repository contains all of the tutorials for the videos created on YouTube.
+If you want a specific tutorial, check out a single branch, otherwise all will be pulled.
