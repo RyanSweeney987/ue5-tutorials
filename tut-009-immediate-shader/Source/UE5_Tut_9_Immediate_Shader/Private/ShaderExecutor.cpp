@@ -1,46 +1,51 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "ShaderExecutor.h"
 
-#include "PixelShaderUtils.h"
-#include "ShaderPasses/ColourExtractRenderPass.h"
 #include "AssetRegistry/AssetRegistryModule.h"
+#include "Components/SceneCaptureComponent2D.h"
+#include "Components/SceneComponent.h"
+#include "Editor.h"
 #include "Engine/TextureRenderTarget2D.h"
 #include "Logging/LogMacros.h"
 #include "Misc/PackageName.h"
+#include "PixelShaderUtils.h"
+#include "RHICommandList.h"
 #include "RenderGraphBuilder.h"
 #include "RenderGraphUtils.h"
-#include "RHICommandList.h"
+#include "ShaderPasses/ColourExtractRenderPass.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 
-#if WITH_EDITOR
-#include "Editor.h"
-#endif
-
+// For outputting to the log
 DEFINE_LOG_CATEGORY_STATIC(LogShaderExecutor, Log, All);
 
 namespace
 {
-	const TCHAR* OutputRenderTargetPackagePath = TEXT("/Game/ShaderExecutor/RT_ColourExtract");
-	const TCHAR* OutputRenderTargetObjectPath = TEXT("/Game/ShaderExecutor/RT_ColourExtract.RT_ColourExtract");
+	const TCHAR* SceneColorTargetPath = TEXT("/Game/ShaderExecutor/RT_SceneColor.RT_SceneColor");
+	const TCHAR* OutputTargetPath = TEXT("/Game/ShaderExecutor/RT_ColourExtract.RT_ColourExtract");
 }
 
-// Sets default values
 AShaderExecutor::AShaderExecutor()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	USceneComponent* RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SetRootComponent(RootSceneComponent);
+
+	// Create the scene capture component so we can capture the scene color buffer
+	SceneCaptureComponent = CreateDefaultSubobject<USceneCaptureComponent2D>(TEXT("SceneCaptureComponent"));
+	SceneCaptureComponent->SetupAttachment(RootComponent);
+	SceneCaptureComponent->bCaptureEveryFrame = false;
+	SceneCaptureComponent->bCaptureOnMovement = false;
+	SceneCaptureComponent->PrimitiveRenderMode = ESceneCapturePrimitiveRenderMode::PRM_RenderScenePrimitives;
 }
 
-// Called when the game starts or when spawned
 void AShaderExecutor::BeginPlay()
 {
 	Super::BeginPlay();
-	
 }
 
-// Called every frame
 void AShaderExecutor::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
@@ -51,95 +56,105 @@ void AShaderExecutor::RunColourExtractRenderPass()
 #if WITH_EDITOR
 	if (!GEditor)
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot execute colour extract pass: GEditor is unavailable."));
+		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot run colour extract pass: editor is unavailable."));
 		return;
 	}
 
-	FViewport* ActiveViewport = GEditor->GetActiveViewport();
-	if (!ActiveViewport)
+	if (!SceneCaptureComponent)
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot execute colour extract pass: no active editor viewport."));
+		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot run colour extract pass: scene capture component is missing."));
 		return;
 	}
 
-	const FIntPoint RenderResolution = ActiveViewport->GetSizeXY();
-	if (RenderResolution.X <= 0 || RenderResolution.Y <= 0)
+	if (CaptureResolution.X <= 0 || CaptureResolution.Y <= 0)
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot execute colour extract pass: invalid viewport resolution (%d x %d)."), RenderResolution.X, RenderResolution.Y);
+		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot run colour extract pass: invalid capture resolution (%d x %d)."), 
+			CaptureResolution.X, CaptureResolution.Y);
 		return;
 	}
 
-	UTextureRenderTarget2D* OutputRenderTarget = GetOrCreateColourExtractRenderTarget(RenderResolution);
-	if (!OutputRenderTarget)
+	// Get the existing render target assets or create new ones if none exist
+	SceneColorCaptureTarget = GetOrCreateColourExtractRenderTarget(SceneColorTargetPath, CaptureResolution, RTF_RGBA16f);
+	ColourExtractRenderTarget = GetOrCreateColourExtractRenderTarget(OutputTargetPath, CaptureResolution, RTF_RGBA16f);
+
+	if (!SceneColorCaptureTarget || !ColourExtractRenderTarget)
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot execute colour extract pass: failed to create or load the output render target."));
+		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot run colour extract pass: failed to prepare render targets."));
 		return;
 	}
+	
+	// Update the scene capture component
+	SceneCaptureComponent->SetWorldTransform(GetActorTransform());
 
-	ColourExtractRenderTarget = OutputRenderTarget;
+	// Capture the current scene color into the SceneColorCaptureTarget
+	CaptureSceneBuffer(SceneColorCaptureTarget, ESceneCaptureSource::SCS_FinalColorLDR);
 
-	FTextureRHIRef InputSceneTexture = ActiveViewport->GetRenderTargetTexture();
-	FTextureRenderTargetResource* OutputRenderTargetResource = OutputRenderTarget->GameThread_GetRenderTargetResource();
-	FTextureRHIRef OutputTextureRHI = OutputRenderTargetResource ? OutputRenderTargetResource->GetRenderTargetTexture() : FTextureRHIRef();
+	// Get the underlying resources so we can get the RHI texture references for the render pass.
+	const FTextureRenderTargetResource* SceneColorResource = SceneColorCaptureTarget->GameThread_GetRenderTargetResource();
+	const FTextureRenderTargetResource* OutputResource = ColourExtractRenderTarget->GameThread_GetRenderTargetResource();
 
-	if (!InputSceneTexture.IsValid() || !OutputTextureRHI.IsValid())
+	// Get the RHIs to create RDG render targets
+	const FTextureRHIRef SceneColorTextureRHI = SceneColorResource ? SceneColorResource->GetRenderTargetTexture() : FTextureRHIRef();
+	const FTextureRHIRef OutputTextureRHI = OutputResource ? OutputResource->GetRenderTargetTexture() : FTextureRHIRef();
+
+	if (!SceneColorTextureRHI.IsValid() || !OutputTextureRHI.IsValid())
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot execute colour extract pass: required RHI textures are not valid."));
+		UE_LOG(LogShaderExecutor, Error, TEXT("Cannot run colour extract pass: render target resources are invalid."));
 		return;
 	}
 
+	// Convert the class variables to variables that can be used by the render command lambda
 	const FVector3f TargetColourVector = FVector3f(TargetColour);
-	const bool bUseUnlitSceneColourLocal = bUseUnlitSceneColour;
+	const float ColorToleranceValue = Tolerance;
+	const FVector3f DeltaWeightsVector = DeltaWeights;
+	const bool bDebugOutputValue = bDebugOutput;
 
+	// Add an enqueued render command to execute the colour extract render pass immediately
 	ENQUEUE_RENDER_COMMAND(RunColourExtractRenderPassNow)(
-		[InputSceneTexture, OutputTextureRHI, TargetColourVector, bUseUnlitSceneColourLocal](FRHICommandListImmediate& RHICmdList)
+		[SceneColorTextureRHI, OutputTextureRHI, TargetColourVector, ColorToleranceValue, DeltaWeightsVector, 
+			bDebugOutputValue](FRHICommandListImmediate& RHICmdList)
 		{
 			FRDGBuilder GraphBuilder(RHICmdList);
-
-			FRDGTextureRef SceneColorTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(InputSceneTexture, TEXT("ShaderExecutor.SceneColor")));
-			FRDGTextureRef OutputTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(OutputTextureRHI, TEXT("ShaderExecutor.Output")));
-
-			// ColourExtractRenderPass::AddPass(
-			// 	GraphBuilder,
-			// 	GetGlobalShaderMap(GMaxRHIFeatureLevel),
-			// 	SceneColorTexture,
-			// 	SceneColorTexture,
-			// 	OutputTexture,
-			// 	TargetColourVector,
-			// 	bUseUnlitSceneColourLocal);
-			//
-			// if (!ensure(SceneColorTexture && OutputTexture && GlobalShaderMap))
-			// {
-			// 	return;
-			// }
+						
+			// Create RDG textures from the RHI textures
+			const TRefCountPtr<IPooledRenderTarget> SceneColourPooledRef = CreateRenderTarget(SceneColorTextureRHI, TEXT("ShaderExecutor.SceneColor"));
+			const TRefCountPtr<IPooledRenderTarget> OutputPooledRef = CreateRenderTarget(OutputTextureRHI, TEXT("ShaderExecutor.Output"));
 			
-			const FIntRect OutputViewport(FIntPoint::ZeroValue, OutputTexture->Desc.Extent);
+			const FRDGTextureRef SceneColorTexture = GraphBuilder.RegisterExternalTexture(SceneColourPooledRef);
+			const FRDGTextureRef OutputTexture = GraphBuilder.RegisterExternalTexture(OutputPooledRef);
+
 			const FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
+			if (!ensure(SceneColorTexture && OutputTexture && GlobalShaderMap))
+			{
+				return;
+			}
 			
-			ensure(SceneColorTexture && OutputTexture && GlobalShaderMap);
-
-			FColourExtractPS::FPermutationDomain PermutationVector;
-			PermutationVector.Set<FColourExtractPS::FUseUnlitSceneColour>(bUseUnlitSceneColourLocal);
-
+			// Set up the parameters
 			FColourExtractPS::FParameters* PassParameters = GraphBuilder.AllocParameters<FColourExtractPS::FParameters>();
 			PassParameters->TargetColour = TargetColourVector;
+			PassParameters->Tolerance = ColorToleranceValue;
+			PassParameters->DeltaWeights = DeltaWeightsVector;
 			PassParameters->SceneColorTexture = SceneColorTexture;
-			// PassParameters->SceneColorUnlitTexture = SceneColorUnlitTexture ? SceneColorUnlitTexture : SceneColorTexture;
 			PassParameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
-
+			
+			// Set up the permutation vectors
+			FColourExtractPS::FPermutationDomain PermutationVector;
+			PermutationVector.Set<FColourExtractPS::FDebugOutput>(bDebugOutputValue);
+			
+			// Render a full screen size pass
 			TShaderMapRef<FColourExtractPS> PixelShader(GlobalShaderMap, PermutationVector);
-
 			FPixelShaderUtils::AddFullscreenPass<FColourExtractPS>(
 				GraphBuilder,
 				GlobalShaderMap,
 				RDG_EVENT_NAME("ColourExtractPass"),
 				PixelShader,
 				PassParameters,
-				OutputViewport);
+				FIntRect(FIntPoint::ZeroValue, OutputTexture->Desc.Extent));
 
 			GraphBuilder.Execute();
 		});
 
+	// Only used from game thread, executes any pending render commands
 	FlushRenderingCommands();
 #else
 	UE_LOG(LogShaderExecutor, Warning, TEXT("RunColourExtractRenderPass is editor-only."));
@@ -147,42 +162,56 @@ void AShaderExecutor::RunColourExtractRenderPass()
 }
 
 #if WITH_EDITOR
-UTextureRenderTarget2D* AShaderExecutor::GetOrCreateColourExtractRenderTarget(const FIntPoint& RenderResolution)
+UTextureRenderTarget2D* AShaderExecutor::GetOrCreateColourExtractRenderTarget(const TCHAR* ObjectPath, const FIntPoint& Resolution, 
+	ETextureRenderTargetFormat Format)
 {
-	UTextureRenderTarget2D* RenderTarget = LoadObject<UTextureRenderTarget2D>(nullptr, OutputRenderTargetObjectPath);
-	if (!RenderTarget)
+	UTextureRenderTarget2D* RenderTarget = LoadObject<UTextureRenderTarget2D>(nullptr, ObjectPath);
+	const bool bNeedsNewAsset = RenderTarget == nullptr;
+
+	// Create a new asset if it doesn't already exist
+	if (bNeedsNewAsset)
 	{
-		const FString PackageName = FString(OutputRenderTargetPackagePath);
+		const FString ObjectPathString = ObjectPath;
+		const FString PackageName = FPackageName::ObjectPathToPackageName(ObjectPathString);
 		const FString AssetName = FPackageName::GetLongPackageAssetName(PackageName);
 		UPackage* Package = CreatePackage(*PackageName);
 
 		RenderTarget = NewObject<UTextureRenderTarget2D>(Package, *AssetName, RF_Public | RF_Standalone);
 		if (!RenderTarget)
 		{
-			UE_LOG(LogShaderExecutor, Error, TEXT("Failed to allocate render target asset '%s'."), OutputRenderTargetObjectPath);
+			UE_LOG(LogShaderExecutor, Error, TEXT("Failed to create render target asset '%s'."), ObjectPath);
 			return nullptr;
 		}
-
-		RenderTarget->RenderTargetFormat = RTF_RGBA16f;
-		RenderTarget->ClearColor = FLinearColor::Black;
-		RenderTarget->AddressX = TA_Clamp;
-		RenderTarget->AddressY = TA_Clamp;
-		RenderTarget->bAutoGenerateMips = false;
-		RenderTarget->InitAutoFormat(RenderResolution.X, RenderResolution.Y);
-		RenderTarget->UpdateResourceImmediate(true);
 
 		FAssetRegistryModule::AssetCreated(RenderTarget);
 		Package->MarkPackageDirty();
 	}
-	else if (RenderTarget->SizeX != RenderResolution.X || RenderTarget->SizeY != RenderResolution.Y)
+
+	const bool bNeedsResize = RenderTarget->SizeX != Resolution.X || RenderTarget->SizeY != Resolution.Y;
+	const bool bNeedsFormat = RenderTarget->RenderTargetFormat != Format;
+
+	// Change the format if needed
+	if (bNeedsFormat)
 	{
-		RenderTarget->ResizeTarget(RenderResolution.X, RenderResolution.Y);
+		RenderTarget->RenderTargetFormat = Format;
 	}
 
-	if (!SaveColourExtractRenderTarget(RenderTarget))
+	// Update the resources as soon as
+	if (bNeedsResize || bNeedsFormat || bNeedsNewAsset)
 	{
-		UE_LOG(LogShaderExecutor, Error, TEXT("Failed to save render target asset '%s'."), OutputRenderTargetObjectPath);
-		return nullptr;
+		RenderTarget->ClearColor = FLinearColor::Black;
+		RenderTarget->AddressX = TA_Clamp;
+		RenderTarget->AddressY = TA_Clamp;
+		RenderTarget->bAutoGenerateMips = false;
+		RenderTarget->InitAutoFormat(Resolution.X, Resolution.Y);
+		RenderTarget->UpdateResourceImmediate(true);
+		RenderTarget->MarkPackageDirty();
+
+		// Try and save the asset
+		if (!SaveColourExtractRenderTarget(RenderTarget))
+		{
+			return nullptr;
+		}
 	}
 
 	return RenderTarget;
@@ -210,5 +239,19 @@ bool AShaderExecutor::SaveColourExtractRenderTarget(UTextureRenderTarget2D* Rend
 	SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
 	SaveArgs.SaveFlags = SAVE_None;
 	return UPackage::SavePackage(Package, RenderTarget, *PackageFileName, SaveArgs);
+}
+
+void AShaderExecutor::CaptureSceneBuffer(UTextureRenderTarget2D* RenderTarget, ESceneCaptureSource CaptureSource)
+{
+	if (!SceneCaptureComponent || !RenderTarget)
+	{
+		return;
+	}
+
+	// Set up the capture then immediately execute the render commands
+	SceneCaptureComponent->TextureTarget = RenderTarget;
+	SceneCaptureComponent->CaptureSource = CaptureSource;
+	SceneCaptureComponent->CaptureScene();
+	FlushRenderingCommands();
 }
 #endif

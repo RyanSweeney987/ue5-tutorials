@@ -10,8 +10,11 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 void EmptyLinkFunctionForGeneratedCodeShaderExecutor() {}
 
 // Begin Cross Module References
+COREUOBJECT_API UScriptStruct* Z_Construct_UScriptStruct_FIntPoint();
 COREUOBJECT_API UScriptStruct* Z_Construct_UScriptStruct_FLinearColor();
+COREUOBJECT_API UScriptStruct* Z_Construct_UScriptStruct_FVector3f();
 ENGINE_API UClass* Z_Construct_UClass_AActor();
+ENGINE_API UClass* Z_Construct_UClass_USceneCaptureComponent2D_NoRegister();
 ENGINE_API UClass* Z_Construct_UClass_UTextureRenderTarget2D_NoRegister();
 UE5_TUT_9_IMMEDIATE_SHADER_API UClass* Z_Construct_UClass_AShaderExecutor();
 UE5_TUT_9_IMMEDIATE_SHADER_API UClass* Z_Construct_UClass_AShaderExecutor_NoRegister();
@@ -25,6 +28,7 @@ struct Z_Construct_UFunction_AShaderExecutor_RunColourExtractRenderPass_Statics
 	static constexpr UECodeGen_Private::FMetaDataPairParam Function_MetaDataParams[] = {
 		{ "CallInEditor", "true" },
 		{ "Category", "Shader Executor" },
+		{ "DisplayName", "Execute Shader" },
 		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
 	};
 #endif // WITH_METADATA
@@ -70,11 +74,34 @@ struct Z_Construct_UClass_AShaderExecutor_Statics
 		{ "IncludePath", "ShaderExecutor.h" },
 		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
 	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_bDebugOutput_MetaData[] = {
+		{ "Category", "Shader Executor" },
+		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
+	};
 	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_TargetColour_MetaData[] = {
 		{ "Category", "Shader Executor" },
 		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
 	};
-	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_bUseUnlitSceneColour_MetaData[] = {
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_Tolerance_MetaData[] = {
+		{ "Category", "Shader Executor" },
+		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
+	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_DeltaWeights_MetaData[] = {
+		{ "Category", "Shader Executor" },
+		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
+	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_CaptureResolution_MetaData[] = {
+		{ "Category", "Shader Executor" },
+		{ "ClampMin", "1" },
+		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
+		{ "UIMin", "1" },
+	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_SceneCaptureComponent_MetaData[] = {
+		{ "Category", "Shader Executor" },
+		{ "EditInline", "true" },
+		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
+	};
+	static constexpr UECodeGen_Private::FMetaDataPairParam NewProp_SceneColorCaptureTarget_MetaData[] = {
 		{ "Category", "Shader Executor" },
 		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
 	};
@@ -83,14 +110,19 @@ struct Z_Construct_UClass_AShaderExecutor_Statics
 		{ "ModuleRelativePath", "Public/ShaderExecutor.h" },
 	};
 #endif // WITH_METADATA
+	static void NewProp_bDebugOutput_SetBit(void* Obj);
+	static const UECodeGen_Private::FBoolPropertyParams NewProp_bDebugOutput;
 	static const UECodeGen_Private::FStructPropertyParams NewProp_TargetColour;
-	static void NewProp_bUseUnlitSceneColour_SetBit(void* Obj);
-	static const UECodeGen_Private::FBoolPropertyParams NewProp_bUseUnlitSceneColour;
+	static const UECodeGen_Private::FFloatPropertyParams NewProp_Tolerance;
+	static const UECodeGen_Private::FStructPropertyParams NewProp_DeltaWeights;
+	static const UECodeGen_Private::FStructPropertyParams NewProp_CaptureResolution;
+	static const UECodeGen_Private::FObjectPropertyParams NewProp_SceneCaptureComponent;
+	static const UECodeGen_Private::FObjectPropertyParams NewProp_SceneColorCaptureTarget;
 	static const UECodeGen_Private::FObjectPropertyParams NewProp_ColourExtractRenderTarget;
 	static const UECodeGen_Private::FPropertyParamsBase* const PropPointers[];
 	static UObject* (*const DependentSingletons[])();
 	static constexpr FClassFunctionLinkInfo FuncInfo[] = {
-		{ &Z_Construct_UFunction_AShaderExecutor_RunColourExtractRenderPass, "RunColourExtractRenderPass" }, // 1477799494
+		{ &Z_Construct_UFunction_AShaderExecutor_RunColourExtractRenderPass, "RunColourExtractRenderPass" }, // 256449348
 	};
 	static_assert(UE_ARRAY_COUNT(FuncInfo) < 2048);
 	static constexpr FCppClassTypeInfoStatic StaticCppClassTypeInfo = {
@@ -98,16 +130,26 @@ struct Z_Construct_UClass_AShaderExecutor_Statics
 	};
 	static const UECodeGen_Private::FClassParams ClassParams;
 };
-const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_TargetColour = { "TargetColour", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, TargetColour), Z_Construct_UScriptStruct_FLinearColor, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_TargetColour_MetaData), NewProp_TargetColour_MetaData) };
-void Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bUseUnlitSceneColour_SetBit(void* Obj)
+void Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bDebugOutput_SetBit(void* Obj)
 {
-	((AShaderExecutor*)Obj)->bUseUnlitSceneColour = 1;
+	((AShaderExecutor*)Obj)->bDebugOutput = 1;
 }
-const UECodeGen_Private::FBoolPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bUseUnlitSceneColour = { "bUseUnlitSceneColour", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Bool | UECodeGen_Private::EPropertyGenFlags::NativeBool, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, sizeof(bool), sizeof(AShaderExecutor), &Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bUseUnlitSceneColour_SetBit, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_bUseUnlitSceneColour_MetaData), NewProp_bUseUnlitSceneColour_MetaData) };
+const UECodeGen_Private::FBoolPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bDebugOutput = { "bDebugOutput", nullptr, (EPropertyFlags)0x0010000000000005, UECodeGen_Private::EPropertyGenFlags::Bool | UECodeGen_Private::EPropertyGenFlags::NativeBool, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, sizeof(bool), sizeof(AShaderExecutor), &Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bDebugOutput_SetBit, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_bDebugOutput_MetaData), NewProp_bDebugOutput_MetaData) };
+const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_TargetColour = { "TargetColour", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, TargetColour), Z_Construct_UScriptStruct_FLinearColor, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_TargetColour_MetaData), NewProp_TargetColour_MetaData) };
+const UECodeGen_Private::FFloatPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_Tolerance = { "Tolerance", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Float, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, Tolerance), METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_Tolerance_MetaData), NewProp_Tolerance_MetaData) };
+const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_DeltaWeights = { "DeltaWeights", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, DeltaWeights), Z_Construct_UScriptStruct_FVector3f, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_DeltaWeights_MetaData), NewProp_DeltaWeights_MetaData) };
+const UECodeGen_Private::FStructPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_CaptureResolution = { "CaptureResolution", nullptr, (EPropertyFlags)0x0010000000000001, UECodeGen_Private::EPropertyGenFlags::Struct, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, CaptureResolution), Z_Construct_UScriptStruct_FIntPoint, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_CaptureResolution_MetaData), NewProp_CaptureResolution_MetaData) };
+const UECodeGen_Private::FObjectPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_SceneCaptureComponent = { "SceneCaptureComponent", nullptr, (EPropertyFlags)0x01140000000a0009, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, SceneCaptureComponent), Z_Construct_UClass_USceneCaptureComponent2D_NoRegister, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_SceneCaptureComponent_MetaData), NewProp_SceneCaptureComponent_MetaData) };
+const UECodeGen_Private::FObjectPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_SceneColorCaptureTarget = { "SceneColorCaptureTarget", nullptr, (EPropertyFlags)0x0114000000020001, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, SceneColorCaptureTarget), Z_Construct_UClass_UTextureRenderTarget2D_NoRegister, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_SceneColorCaptureTarget_MetaData), NewProp_SceneColorCaptureTarget_MetaData) };
 const UECodeGen_Private::FObjectPropertyParams Z_Construct_UClass_AShaderExecutor_Statics::NewProp_ColourExtractRenderTarget = { "ColourExtractRenderTarget", nullptr, (EPropertyFlags)0x0114000000020001, UECodeGen_Private::EPropertyGenFlags::Object | UECodeGen_Private::EPropertyGenFlags::ObjectPtr, RF_Public|RF_Transient|RF_MarkAsNative, nullptr, nullptr, 1, STRUCT_OFFSET(AShaderExecutor, ColourExtractRenderTarget), Z_Construct_UClass_UTextureRenderTarget2D_NoRegister, METADATA_PARAMS(UE_ARRAY_COUNT(NewProp_ColourExtractRenderTarget_MetaData), NewProp_ColourExtractRenderTarget_MetaData) };
 const UECodeGen_Private::FPropertyParamsBase* const Z_Construct_UClass_AShaderExecutor_Statics::PropPointers[] = {
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bDebugOutput,
 	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_TargetColour,
-	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_bUseUnlitSceneColour,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_Tolerance,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_DeltaWeights,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_CaptureResolution,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_SceneCaptureComponent,
+	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_SceneColorCaptureTarget,
 	(const UECodeGen_Private::FPropertyParamsBase*)&Z_Construct_UClass_AShaderExecutor_Statics::NewProp_ColourExtractRenderTarget,
 };
 static_assert(UE_ARRAY_COUNT(Z_Construct_UClass_AShaderExecutor_Statics::PropPointers) < 2048);
@@ -151,10 +193,10 @@ AShaderExecutor::~AShaderExecutor() {}
 struct Z_CompiledInDeferFile_FID_Plugins_tut_009_immediate_shader_Source_UE5_Tut_9_Immediate_Shader_Public_ShaderExecutor_h_Statics
 {
 	static constexpr FClassRegisterCompiledInInfo ClassInfo[] = {
-		{ Z_Construct_UClass_AShaderExecutor, AShaderExecutor::StaticClass, TEXT("AShaderExecutor"), &Z_Registration_Info_UClass_AShaderExecutor, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(AShaderExecutor), 4025317276U) },
+		{ Z_Construct_UClass_AShaderExecutor, AShaderExecutor::StaticClass, TEXT("AShaderExecutor"), &Z_Registration_Info_UClass_AShaderExecutor, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(AShaderExecutor), 2492072201U) },
 	};
 };
-static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_Plugins_tut_009_immediate_shader_Source_UE5_Tut_9_Immediate_Shader_Public_ShaderExecutor_h_1953564359(TEXT("/Script/UE5_Tut_9_Immediate_Shader"),
+static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_Plugins_tut_009_immediate_shader_Source_UE5_Tut_9_Immediate_Shader_Public_ShaderExecutor_h_494491725(TEXT("/Script/UE5_Tut_9_Immediate_Shader"),
 	Z_CompiledInDeferFile_FID_Plugins_tut_009_immediate_shader_Source_UE5_Tut_9_Immediate_Shader_Public_ShaderExecutor_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_Plugins_tut_009_immediate_shader_Source_UE5_Tut_9_Immediate_Shader_Public_ShaderExecutor_h_Statics::ClassInfo),
 	nullptr, 0,
 	nullptr, 0);
