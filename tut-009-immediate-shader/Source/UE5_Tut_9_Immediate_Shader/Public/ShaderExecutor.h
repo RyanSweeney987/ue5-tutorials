@@ -6,20 +6,37 @@
 #include "GameFramework/Actor.h"
 #include "ShaderExecutor.generated.h"
 
+class UTextureRenderTarget2D;
+
 UCLASS()
 class UE5_TUT_9_IMMEDIATE_SHADER_API AShaderExecutor : public AActor
 {
 	GENERATED_BODY()
 
 public:
-	// Sets default values for this actor's properties
 	AShaderExecutor();
 
 protected:
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
 public:
-	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	UFUNCTION(CallInEditor, Category = "Shader Executor")
+	void RunColourExtractRenderPass();
+
+	UPROPERTY(EditAnywhere, Category = "Shader Executor")
+	FLinearColor TargetColour = FLinearColor::Red;
+
+	UPROPERTY(EditAnywhere, Category = "Shader Executor")
+	bool bUseUnlitSceneColour = false;
+
+	UPROPERTY(VisibleAnywhere, Category = "Shader Executor")
+	TObjectPtr<UTextureRenderTarget2D> ColourExtractRenderTarget = nullptr;
+
+#if WITH_EDITOR
+private:
+	UTextureRenderTarget2D* GetOrCreateColourExtractRenderTarget(const FIntPoint& RenderResolution);
+	bool SaveColourExtractRenderTarget(UTextureRenderTarget2D* RenderTarget) const;
+#endif
 };

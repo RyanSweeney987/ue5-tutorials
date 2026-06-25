@@ -8,6 +8,17 @@ public class UE5_Tut_9_Immediate_Shader : ModuleRules
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		
+		if (Target.bBuildEditor)
+		{
+			PrivateDependencyModuleNames.AddRange(
+				new string[]
+				{
+					"AssetRegistry",
+					"UnrealEd"
+				}
+			);
+		}
+		
 		PublicIncludePaths.AddRange(
 			new string[] {
 				// ... add public include paths required here ...
@@ -26,6 +37,9 @@ public class UE5_Tut_9_Immediate_Shader : ModuleRules
 			new string[]
 			{
 				"Core",
+				"RenderCore",
+				"RHI",
+				"Renderer",
 				// ... add other public dependencies that you statically link with here ...
 			}
 			);
@@ -36,12 +50,11 @@ public class UE5_Tut_9_Immediate_Shader : ModuleRules
 			{
 				"CoreUObject",
 				"Engine",
+				"Projects",
 				"Slate",
 				"SlateCore",
 				// ... add private dependencies that you statically link with here ...	
-			}
-			);
-		
+			});
 		
 		DynamicallyLoadedModuleNames.AddRange(
 			new string[]
