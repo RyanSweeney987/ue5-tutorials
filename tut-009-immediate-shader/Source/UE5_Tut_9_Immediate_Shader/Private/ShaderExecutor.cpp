@@ -85,9 +85,14 @@ void AShaderExecutor::RunColourExtractRenderPass()
 	
 	// Update the scene capture component
 	SceneCaptureComponent->SetWorldTransform(GetActorTransform());
-
-	// Capture the current scene color into the SceneColorCaptureTarget
-	CaptureSceneBuffer(SceneColorCaptureTarget, ESceneCaptureSource::SCS_FinalColorLDR);
+	
+    // Set up the capture then immediately execute the render commands
+    SceneCaptureComponent->TextureTarget = SceneColorCaptureTarget;
+    SceneCaptureComponent->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
+    SceneCaptureComponent->CaptureScene();
+	// Flush here so we can get the scene capture results immediately for use later on
+	// This will hold up the game thread until the render thread has finished executing the capture commands
+    FlushRenderingCommands();
 
 	// Get the underlying resources so we can get the RHI texture references for the render pass.
 	const FTextureRenderTargetResource* SceneColorResource = SceneColorCaptureTarget->GameThread_GetRenderTargetResource();
@@ -109,7 +114,7 @@ void AShaderExecutor::RunColourExtractRenderPass()
 	const FVector3f DeltaWeightsVector = DeltaWeights;
 	const bool bDebugOutputValue = bDebugOutput;
 
-	// Add an enqueued render command to execute the colour extract render pass immediately
+	// Add an enqueued render command to add our colour extract render pass immediately
 	ENQUEUE_RENDER_COMMAND(RunColourExtractRenderPassNow)(
 		[SceneColorTextureRHI, OutputTextureRHI, TargetColourVector, ColorToleranceValue, DeltaWeightsVector, 
 			bDebugOutputValue](FRHICommandListImmediate& RHICmdList)
@@ -151,10 +156,11 @@ void AShaderExecutor::RunColourExtractRenderPass()
 				PassParameters,
 				FIntRect(FIntPoint::ZeroValue, OutputTexture->Desc.Extent));
 
+			// This converts the RDG graph into RHI commands to be sent to the GPU and executed
 			GraphBuilder.Execute();
 		});
 
-	// Only used from game thread, executes any pending render commands
+	// Like before we need to flush the render commands so that the render thread has finished executing the colour extract pass
 	FlushRenderingCommands();
 #else
 	UE_LOG(LogShaderExecutor, Warning, TEXT("RunColourExtractRenderPass is editor-only."));
@@ -239,19 +245,5 @@ bool AShaderExecutor::SaveColourExtractRenderTarget(UTextureRenderTarget2D* Rend
 	SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
 	SaveArgs.SaveFlags = SAVE_None;
 	return UPackage::SavePackage(Package, RenderTarget, *PackageFileName, SaveArgs);
-}
-
-void AShaderExecutor::CaptureSceneBuffer(UTextureRenderTarget2D* RenderTarget, ESceneCaptureSource CaptureSource)
-{
-	if (!SceneCaptureComponent || !RenderTarget)
-	{
-		return;
-	}
-
-	// Set up the capture then immediately execute the render commands
-	SceneCaptureComponent->TextureTarget = RenderTarget;
-	SceneCaptureComponent->CaptureSource = CaptureSource;
-	SceneCaptureComponent->CaptureScene();
-	FlushRenderingCommands();
 }
 #endif

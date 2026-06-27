@@ -55,6 +55,5 @@ private:
 	UTextureRenderTarget2D* GetOrCreateColourExtractRenderTarget(const TCHAR* ObjectPath, const FIntPoint& Resolution, 
 		ETextureRenderTargetFormat Format);
 	bool SaveColourExtractRenderTarget(UTextureRenderTarget2D* RenderTarget) const;
-	void CaptureSceneBuffer(UTextureRenderTarget2D* RenderTarget, ESceneCaptureSource CaptureSource);
 #endif
 };
