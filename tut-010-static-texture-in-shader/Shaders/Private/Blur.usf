@@ -1,0 +1,32 @@
+#include "/Engine/Public/Platform.ush"
+
+Texture2D InputTexture;
+SamplerState InputSampler;
+
+float2 TexelSize;
+
+float4 MainPS(float4 SvPosition : SV_POSITION, float2 UV : TEXCOORD0) : SV_Target0
+{
+	float2 Offsets[9] =
+	{
+		float2(-1.0, -1.0), float2(0.0, -1.0), float2(1.0, -1.0),
+		float2(-1.0,  0.0), float2(0.0,  0.0), float2(1.0,  0.0),
+		float2(-1.0,  1.0), float2(0.0,  1.0), float2(1.0,  1.0)
+	};
+
+	float Weights[9] =
+	{
+		1.0 / 16.0, 2.0 / 16.0, 1.0 / 16.0,
+		2.0 / 16.0, 4.0 / 16.0, 2.0 / 16.0,
+		1.0 / 16.0, 2.0 / 16.0, 1.0 / 16.0
+	};
+
+	float4 Result = float4(0.0, 0.0, 0.0, 0.0);
+	UNROLL
+	for (int i = 0; i < 9; ++i)
+	{
+		Result += InputTexture.SampleLevel(InputSampler, UV + Offsets[i] * TexelSize, 0) * Weights[i];
+	}
+
+	return Result;
+}

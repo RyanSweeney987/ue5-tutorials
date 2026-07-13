@@ -5,7 +5,7 @@
 	"FriendlyName": "UE5_Tut_10_Static_Texture_In_Shader",
 	"Description": "",
 	"Category": "Other",
-	"CreatedBy": "Ryan Sweeney",
+	"CreatedBy": "",
 	"CreatedByURL": "",
 	"DocsURL": "",
 	"MarketplaceURL": "",
@@ -17,7 +17,7 @@
 		{
 			"Name": "UE5_Tut_10_Static_Texture_In_Shader",
 			"Type": "Runtime",
-			"LoadingPhase": "Default"
+			"LoadingPhase": "PostConfigInit"
 		}
 	]
 }
