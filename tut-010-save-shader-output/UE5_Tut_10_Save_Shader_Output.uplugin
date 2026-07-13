@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
-	"FriendlyName": "UE5_Tut_10_Static_Texture_In_Shader",
+	"FriendlyName": "UE5_Tut_10_Save_Shader_Output",
 	"Description": "",
 	"Category": "Other",
 	"CreatedBy": "",
@@ -15,7 +15,7 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "UE5_Tut_10_Static_Texture_In_Shader",
+			"Name": "UE5_Tut_10_Save_Shader_Output",
 			"Type": "Runtime",
 			"LoadingPhase": "PostConfigInit"
 		}
