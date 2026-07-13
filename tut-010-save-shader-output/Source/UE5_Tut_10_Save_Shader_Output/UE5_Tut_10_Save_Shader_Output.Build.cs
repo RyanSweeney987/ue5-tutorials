@@ -3,9 +3,9 @@
 using System.IO;
 using UnrealBuildTool;
 
-public class UE5_Tut_10_Static_Texture_In_Shader : ModuleRules
+public class UE5_Tut_10_Save_Shader_Output : ModuleRules
 {
-	public UE5_Tut_10_Static_Texture_In_Shader(ReadOnlyTargetRules Target) : base(Target)
+	public UE5_Tut_10_Save_Shader_Output(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 

@@ -5,7 +5,7 @@
 
 class UTexture;
 
-class UE5_TUT_10_STATIC_TEXTURE_IN_SHADER_API FBlurSceneViewExtension final : public FSceneViewExtensionBase
+class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public FSceneViewExtensionBase
 {
 public:
 	using FReadbackCallback = TFunction<void(TArray64<uint8>&&, int32, int32)>;

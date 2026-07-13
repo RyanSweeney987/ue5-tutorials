@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class FUE5_Tut_10_Static_Texture_In_ShaderModule : public IModuleInterface
+class FUE5_Tut_10_Save_Shader_OutputModule : public IModuleInterface
 {
 public:
 

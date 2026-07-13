@@ -8,7 +8,7 @@ class FBlurSceneViewExtension;
 class UTexture;
 
 UCLASS()
-class UE5_TUT_10_STATIC_TEXTURE_IN_SHADER_API ABlurStaticTexture : public AActor
+class UE5_TUT_10_SAVE_SHADER_OUTPUT_API ABlurStaticTexture : public AActor
 {
 	GENERATED_BODY()
 

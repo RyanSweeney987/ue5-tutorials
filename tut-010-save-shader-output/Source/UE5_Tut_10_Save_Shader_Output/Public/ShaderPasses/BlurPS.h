@@ -4,7 +4,7 @@
 #include "GlobalShader.h"
 #include "ShaderParameterStruct.h"
 
-class UE5_TUT_10_STATIC_TEXTURE_IN_SHADER_API FBlurPS : public FGlobalShader
+class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurPS : public FGlobalShader
 {
 public:
 	BEGIN_SHADER_PARAMETER_STRUCT(FBlurPSParam, )
