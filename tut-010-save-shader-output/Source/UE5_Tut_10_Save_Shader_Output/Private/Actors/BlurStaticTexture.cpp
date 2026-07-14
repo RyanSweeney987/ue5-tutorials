@@ -23,17 +23,7 @@ void ABlurStaticTexture::RunBlurAndSaveTexture()
 		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: SourceTexture is not set."));
 		return;
 	}
-
-	EnsureSceneViewExtension();
-
-	if (!BlurSceneViewExtension.IsValid())
-	{
-		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Failed to create scene view extension."));
-		return;
-	}
-
-	BlurSceneViewExtension->SetSourceTexture(SourceTexture);
-
+	
 	TWeakObjectPtr<ABlurStaticTexture> WeakThis(this);
 	EnqueueBlurRequest(
 		[WeakThis](TArray64<uint8>&& PixelData, int32 Width, int32 Height) mutable
@@ -48,20 +38,6 @@ void ABlurStaticTexture::RunBlurAndSaveTexture()
 #endif
 		},
 		bDownloadImmediately);
-}
-
-void ABlurStaticTexture::BeginDestroy()
-{
-	BlurSceneViewExtension.Reset();
-	Super::BeginDestroy();
-}
-
-void ABlurStaticTexture::EnsureSceneViewExtension()
-{
-	if (!BlurSceneViewExtension.IsValid())
-	{
-		BlurSceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>();
-	}
 }
 
 void ABlurStaticTexture::EnqueueBlurRequest(
@@ -129,7 +105,7 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(TArray64<uint8>&& PixelDat
 	NewTexture->MipGenSettings = TMGS_NoMipmaps;
 	NewTexture->CompressionSettings = TC_Default;
 	NewTexture->SRGB = true;
-	NewTexture->Source.Init(Width, Height, 1, 1, TSF_BGRA8, PixelData.GetData());
+	NewTexture->Source.Init(Width, Height, 1, 1, TSF_RGBA16F, PixelData.GetData());
 	NewTexture->UpdateResource();
 
 	FAssetRegistryModule::AssetCreated(NewTexture);
