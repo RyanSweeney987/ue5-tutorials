@@ -19,6 +19,9 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API USaveShaderOutputSubsystem : public UEng
 	
 	FCriticalSection SourceTextureMutex;
 	TWeakObjectPtr<UTexture2D> SourceTexture;
+	
+	DECLARE_DELEGATE_OneParam(FOnReadbackComplete, const TArray64<uint8>&);
+	FOnReadbackComplete OnReadbackCompleteDelegate;
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
@@ -29,4 +32,6 @@ public:
 	UTexture2D* ConsumeSourceTexture_RenderThread();
 	
 	bool IsSourceTextureSet() const;
+	
+	FOnReadbackComplete& OnReadbackComplete() { return OnReadbackCompleteDelegate; }
 };

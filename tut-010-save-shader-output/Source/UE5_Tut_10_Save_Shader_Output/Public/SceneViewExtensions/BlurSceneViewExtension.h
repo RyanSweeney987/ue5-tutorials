@@ -9,14 +9,14 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 {
 	FSceneViewExtensionIsActiveFunctor IsActiveFunctor;
 		
-	using FReadbackCallback = TFunction<void(TArray64<uint8>&&, int32, int32)>;
-	FReadbackCallback PendingReadbackCallback;
+	TUniquePtr<FRHIGPUTextureReadback> Readback;
 		
-	bool bPendingDownloadImmediately = false;
+	bool bImmediateFetch = false;
 	bool bHasPendingRequest = false;
+	
+	TFunction<void(TArray<int32>&)> CallbackFunction;
 public:
-
-	explicit FBlurSceneViewExtension(const FAutoRegister& AutoRegister);
+	FBlurSceneViewExtension(const FAutoRegister& AutoRegister);
 	
 	//-----------------------------------------------------------------------------------
 	// Scene View Extension Implementation
@@ -37,7 +37,5 @@ public:
 
 	// virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override;
 
-	//-----------------------------------------------------------------------------------
-
-
+	//-----------------------------------------------------------------------------
 };

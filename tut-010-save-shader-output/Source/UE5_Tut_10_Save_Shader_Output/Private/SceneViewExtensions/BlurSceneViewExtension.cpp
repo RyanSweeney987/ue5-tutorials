@@ -56,7 +56,8 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	// Get the underlying RHI for the texture so we can actually use it in the shader
 	const FTextureRHIRef SourceTextureRHI = SourceTexture->GetResource()->TextureRHI;
 	// The size of the texture will be used as the render viewport size
-	const FIntRect Viewport = FIntRect(0, 0, SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
+	const FIntPoint TextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
+	const FIntRect Viewport = FIntRect(0, 0, TextureExtent.X, TextureExtent.Y);
 	
 	const FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
 
@@ -88,44 +89,86 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	// However it could be a few frames until you get your results back
 	// Or we do it immediately, this will lock up the CPU until the GPU catches up
 	
-	// const TSharedRef<FRHIGPUTextureReadback, ESPMode::ThreadSafe> Readback = 
-	// 	MakeShared<FRHIGPUTextureReadback, ESPMode::ThreadSafe>(TEXT("BlurOutputReadback"));
-	// AddEnqueueCopyPass(GraphBuilder, &Readback.Get(), OutputTexture, FResolveRect());
-	//
-	// // Readback or setting texture data found somewhere to do with PNG - ImageUtils
-	//
-	// AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,
-	// 	[Readback, Width, Height, Callback = MoveTemp(LocalCallback), bDownloadImmediately]() mutable
-	// {
-	// 	TArray64<uint8> PixelData;
-	// 	PixelData.SetNumZeroed(static_cast<int64>(Width) * static_cast<int64>(Height) * 4);
-	//
-	// 	int32 RowPitchInPixels = 0;
-	// 		// Calling this after execute would force the CPU to wait for the GPU to catch up
-	// 	if (void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
-	// 	{
-	// 		const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
-	// 		const int64 DestRowBytes = static_cast<int64>(Width) * 4;
-	// 		const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
-	//
-	// 		for (int32 Row = 0; Row < Height; ++Row)
-	// 		{
-	// 			FMemory::Memcpy(
-	// 				PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
-	// 				SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
-	// 				DestRowBytes);
-	// 		}
-	//
-	// 		Readback->Unlock();
-	// 	}
-	//
-	// 	AsyncTask(ENamedThreads::GameThread,
-	// 		[Callback = MoveTemp(Callback), PixelData = MoveTemp(PixelData), Width, Height]() mutable
-	// 		{
-	// 			if (Callback)
-	// 			{
-	// 				Callback(MoveTemp(PixelData), Width, Height);
-	// 			}
-	// 		});
-	// });
+	// Create the readback buffer if it doesn't exist
+	// This will get reset when the copy has completed
+	if(!Readback.IsValid())
+	{
+		Readback = MakeUnique<FRHIGPUTextureReadback>(TEXT("BlurOutputReadback"));
+	}
+	
+	AddEnqueueCopyPass(GraphBuilder, Readback.Get(), OutputTexture);
+	
+	// If immediate fetch is enabled - lock straight away and get the data
+	if(bImmediateFetch)
+	{
+		int32 RowPitchInPixels = 0;
+		if(const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
+		{
+			TArray64<uint8> PixelData;
+			PixelData.SetNumZeroed(static_cast<int64>(TextureExtent.X) * static_cast<int64>(TextureExtent.Y) * 4);
+			
+			const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
+			const int64 DestRowBytes = static_cast<int64>(TextureExtent.X) * 4;
+			const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
+			
+			for (int32 Row = 0; Row < TextureExtent.Y; ++Row)
+			{
+				FMemory::Memcpy(
+					PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
+					SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
+					DestRowBytes);
+			}
+			
+			// Process the data
+			Readback->Unlock();
+		}
+		
+		return;
+	}
+	
+	
+	// Otherwise set up the async task to perform the fetch when it's ready
+	
+	// https://docs.clusterfact.games/docs/Snippets/
+	// Pre 5.5 - lower level
+	//TRefCountPtr<FRHIStagingBuffer> Staging = RHICreateStagingBuffer();
+	// RHICmdList.CopyToStagingBuffer(SrcRHI, Staging, Offset, Size);
+	
+	// Async readback
+	
+	
+	// Readback or setting texture data found somewhere to do with PNG - ImageUtils
+	
+	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,[Readback,TextureExtent, Callback = MoveTemp(LocalCallback)]() mutable
+	{
+		TArray64<uint8> PixelData;
+		PixelData.SetNumZeroed(static_cast<int64>(TextureExtent.X) * static_cast<int64>(TextureExtent.Y) * 4);
+	
+		int32 RowPitchInPixels = 0;
+			// Calling this after execute would force the CPU to wait for the GPU to catch up
+		if (void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
+		{
+			const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
+			const int64 DestRowBytes = static_cast<int64>(TextureExtent.X) * 4;
+			const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
+	
+			for (int32 Row = 0; Row < TextureExtent.Y; ++Row)
+			{
+				FMemory::Memcpy(
+					PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
+					SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
+					DestRowBytes);
+			}
+	
+			Readback->Unlock();
+		}
+	
+		AsyncTask(ENamedThreads::GameThread, [Callback = MoveTemp(Callback), PixelData = MoveTemp(PixelData), TextureExtent]() mutable
+			{
+				if (Callback)
+				{
+					Callback(MoveTemp(PixelData), TextureExtent.X, TextureExtent.Y);
+				}
+			});
+	});
 }
