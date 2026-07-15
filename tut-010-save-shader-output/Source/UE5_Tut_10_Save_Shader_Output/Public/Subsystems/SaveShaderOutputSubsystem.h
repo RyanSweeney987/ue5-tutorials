@@ -25,7 +25,7 @@ public:
 	
 	static USaveShaderOutputSubsystem* Get();
 		
-	void QueueBlurRequest(UTexture* InTexture, const bool bInDownloadImmediately = false);
+	void QueueBlurRequest(UTexture* InTexture, const float BlurRadius, const bool bInDownloadImmediately = false);
 	
 	FOnReadbackComplete& OnReadbackComplete() { return OnReadbackCompleteDelegate; }
 };

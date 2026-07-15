@@ -17,6 +17,8 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 	
 	FIntPoint ReadbackTextureExtent = FIntPoint::ZeroValue;
 	
+	float BlurRadius = 1.0f;
+	
 	TWeakObjectPtr<UTexture> SourceTexture;
 	FTextureRHIRef SourceRHITexture = nullptr;
 	
@@ -24,7 +26,7 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 public:
 	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
 	
-	void QueueBlurRequest_GameThread(UTexture* InTexture, const bool bInDownloadImmediately = false);
+	void QueueBlurRequest_GameThread(UTexture* InTexture, const float InBlurRadius, const bool bInDownloadImmediately = false);
 	void SetCallbackFunction(const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
 	
 	//-----------------------------------------------------------------------------------

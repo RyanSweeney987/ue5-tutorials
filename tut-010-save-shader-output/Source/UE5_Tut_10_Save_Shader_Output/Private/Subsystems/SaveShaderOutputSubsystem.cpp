@@ -31,7 +31,8 @@ USaveShaderOutputSubsystem* USaveShaderOutputSubsystem::Get()
 	return nullptr;
 }
 
-void USaveShaderOutputSubsystem::QueueBlurRequest(UTexture* InTexture, const bool bInDownloadImmediately)
+void USaveShaderOutputSubsystem::QueueBlurRequest(UTexture* InTexture, const float BlurRadius, const bool bInDownloadImmediately)
 {
-	SceneViewExtension->QueueBlurRequest_GameThread(InTexture, bInDownloadImmediately);
+	checkf(BlurRadius >= 0.1f && BlurRadius <= 100.0f, TEXT("BlurRadius must be between 0.1 and 100.0 inclusive"));
+	SceneViewExtension->QueueBlurRequest_GameThread(InTexture, BlurRadius, bInDownloadImmediately);
 }

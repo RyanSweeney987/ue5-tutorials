@@ -1,34 +1,66 @@
 #include "/Engine/Public/Platform.ush"
 
+#ifndef LARGE_KERNEL
+#define LARGE_KERNEL 1
+#endif
+
+#if LARGE_KERNEL
+	#define KERNEL_SIZE 25 
+	#define KERNEL_WEIGHTS Weights5x5
+	#define KERNEL_OFFSETS Offsets5x5
+#else
+	#define KERNEL_SIZE 9
+	#define KERNEL_WEIGHTS Weights3x3
+	#define KERNEL_OFFSETS Offsets3x3
+#endif
+
+
 Texture2D InputTexture;
 SamplerState InputSampler;
 
 float2 TexelSize;
 
-static const float Weights[9] =
+static const float Weights3x3[9] =
 {
 	0.0625, 0.1250, 0.0625,
 	0.1250, 0.2500, 0.1250,
 	0.0625, 0.1250, 0.0625
 };
 
-static const float2 Offsets[9] =
+static const float Weights5x5[25] = {
+	0.00390625, 0.01562500, 0.02343750, 0.01562500, 0.00390625,
+	0.01562500, 0.06250000, 0.09375000, 0.06250000, 0.01562500,
+	0.02343750, 0.09375000, 0.14062500, 0.09375000, 0.02343750,
+	0.01562500, 0.06250000, 0.09375000, 0.06250000, 0.01562500,
+	0.00390625, 0.01562500, 0.02343750, 0.01562500, 0.00390625
+};
+
+static const float2 Offsets3x3[9] =
 {
 	float2(-1.0, -1.0), float2(0.0, -1.0), float2(1.0, -1.0),
 	float2(-1.0,  0.0), float2(0.0,  0.0), float2(1.0,  0.0),
 	float2(-1.0,  1.0), float2(0.0,  1.0), float2(1.0,  1.0)
 };
 
+static const float2 Offsets5x5[25] = 
+{
+	float2(-2.0, -2.0), float2(-1.0, -2.0), float2(0.0, -2.0), float2(1.0, -2.0), float2(2.0, -2.0),
+	float2(-2.0, -1.0), float2(-1.0, -1.0), float2(0.0, -1.0), float2(1.0, -1.0), float2(2.0, -1.0),
+	float2(-2.0,  0.0), float2(-1.0,  0.0), float2(0.0,  0.0), float2(1.0,  0.0), float2(2.0,  0.0),
+	float2(-2.0,  1.0), float2(-1.0,  1.0), float2(0.0,  1.0), float2(1.0,  1.0), float2(2.0,  1.0),
+	float2(-2.0,  2.0), float2(-1.0,  2.0), float2(0.0,  2.0), float2(1.0,  2.0), float2(2.0,  2.0)
+};
+
 float4 MainPS(float4 SvPosition : SV_POSITION) : SV_Target0
 {
 	float4 Result = float4(0.0, 0.0, 0.0, 0.0);
-	
+
 	UNROLL
-	for (int i = 0; i < 9; ++i)
+	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
-		float2 SamplePositionUV = (SvPosition.xy + Offsets[i]) * TexelSize;
-		Result += InputTexture.SampleLevel(InputSampler, SamplePositionUV, 0) * Weights[i];
+		float2 SamplePositionUV = (SvPosition.xy + KERNEL_OFFSETS[i]) * TexelSize;
+		Result += InputTexture.SampleLevel(InputSampler, SamplePositionUV, 0) * KERNEL_WEIGHTS[i];
 	}
 
-	return Result;
+	return saturate(Result);
 }

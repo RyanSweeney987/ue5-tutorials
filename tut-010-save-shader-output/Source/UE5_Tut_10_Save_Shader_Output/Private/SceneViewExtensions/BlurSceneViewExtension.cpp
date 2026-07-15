@@ -13,6 +13,33 @@
 
 // Useful link https://docs.clusterfact.games/docs/Snippets/
 
+void GetPassCounts(const float BlurRadius, int32& Kernel3X3Passes, int32& Kernel5X5Passes)
+{
+	// Convert requested blur radius to Gaussian sigma (radius ~= 3*sigma)
+	const float TargetSigma = FMath::Max(0.0f, BlurRadius) / 3.0f;
+	const float TargetVariance = TargetSigma * TargetSigma;
+
+	// From your binomial kernels:
+	// 3x3 => sigma^2 ~= 0.5 per pass
+	// 5x5 => sigma^2 ~= 1.0 per pass
+	constexpr float VariancePer5X5Pass = 1.0f;
+	constexpr float VariancePer3X3Pass = 0.5f;
+
+	// Quantize to the nearest representable variance step (0.5) so 3x3 fills only the remainder
+	const float QuantizedVariance = FMath::RoundToFloat(TargetVariance / VariancePer3X3Pass) * VariancePer3X3Pass;
+
+	// Prefer 5x5 passes first, then 3x3 for the remaining half-step
+	Kernel5X5Passes = FMath::FloorToInt(QuantizedVariance / VariancePer5X5Pass);
+	const float RemainingVariance = QuantizedVariance - (Kernel5X5Passes * VariancePer5X5Pass);
+	Kernel3X3Passes = FMath::RoundToInt(RemainingVariance / VariancePer3X3Pass); // 0 or 1
+
+	// Optional: ensure non-zero work when BlurRadius > 0
+	if (BlurRadius > 0.0f && Kernel5X5Passes == 0 && Kernel3X3Passes == 0)
+	{
+		Kernel3X3Passes = 1;
+	}
+}
+
 FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction)
 	: FSceneViewExtensionBase(AutoRegister),
 	CallbackFunction(InCallbackFunction)
@@ -29,11 +56,12 @@ FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegist
 	IsActiveThisFrameFunctions.Add(IsActiveFunctor);
 }
 
-void FBlurSceneViewExtension::QueueBlurRequest_GameThread(UTexture* InTexture, const bool bInDownloadImmediately)
+void FBlurSceneViewExtension::QueueBlurRequest_GameThread(UTexture* InTexture, const float InBlurRadius, const bool bInDownloadImmediately)
 {
 	checkf(IsInGameThread(), TEXT("QueueBlurRequest_GameThread must be called from the game thread."));
 	
 	bHasQueuedTexture = true;
+	BlurRadius = InBlurRadius;
 	SourceTexture = InTexture;
 	ReadbackTextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
 	bImmediateFetch = bInDownloadImmediately;
@@ -114,28 +142,63 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 
 	// Create the source texture ref
 	const FRDGTextureRef InputTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(SourceRHITexture, TEXT("BlurInputTexture")));
-
-	// Create the output texture, it should be the same as the input texture
-	FRDGTextureDesc OutputTextureDesc = InputTexture->Desc;
-	OutputTextureDesc.Flags |= TexCreate_RenderTargetable | TexCreate_ShaderResource;
-	const FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("BlurOutputTexture"));
-
-	// Setup parameters
-	FBlurPS::FParameters* Parameters = GraphBuilder.AllocParameters<FBlurPS::FParameters>();
-	Parameters->InputTexture = InputTexture;
-	Parameters->InputSampler = TStaticSamplerState<SF_Bilinear>::GetRHI();
-	Parameters->TexelSize = FVector2f(1.0f / TextureExtent.X, 1.0f / TextureExtent.Y);
-	Parameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
 	
-	// Run the shader
-	const TShaderMapRef<FBlurPS> PixelShader(GlobalShaderMap);
-	FPixelShaderUtils::AddFullscreenPass(
-		GraphBuilder,
-		GlobalShaderMap,
-		RDG_EVENT_NAME("BlurPS"),
-		PixelShader,
-		Parameters,
-		Viewport);
+	// Calculate the number of passes required
+	int32 Kernel3X3Passes = 0, Kernel5X5Passes = 0;
+	GetPassCounts(BlurRadius, Kernel3X3Passes, Kernel5X5Passes);
+	
+	// Create the final output texture, it should be the same as the input texture
+	
+	// const FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("BlurOutputTexture"));
+	
+	int32 TotalPasses = Kernel3X3Passes + Kernel5X5Passes;
+	
+	FRDGTextureRef PreviousInput = InputTexture;
+	FRDGTextureRef OutputTexture = nullptr;
+	
+	while(TotalPasses > 0)
+	{
+		// Create the output texture, it should be the same as the input texture
+		FRDGTextureDesc OutputTextureDesc = InputTexture->Desc;
+		OutputTextureDesc.Flags |= TexCreate_RenderTargetable | TexCreate_ShaderResource;
+		OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("OutputTexture"));
+		
+		// Setup parameters
+		FBlurPS::FParameters* Parameters = GraphBuilder.AllocParameters<FBlurPS::FParameters>();
+		Parameters->InputTexture = PreviousInput;
+		Parameters->InputSampler = TStaticSamplerState<SF_Bilinear, AM_Clamp, AM_Clamp, AM_Clamp>::GetRHI();
+		Parameters->TexelSize = FVector2f(1.0f / TextureExtent.X, 1.0f / TextureExtent.Y);
+		Parameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
+		
+		// Setup the permutation vector so it sets whether to use the larger or smaller kernel
+		FBlurPS::FPermutationDomain PermutationVector;
+		PermutationVector.Set<FBlurPS::FLargeKernel>(Kernel5X5Passes > 0);
+		
+		const TShaderMapRef<FBlurPS> PixelShader(GlobalShaderMap, PermutationVector);
+		
+		// Run the shader
+		FPixelShaderUtils::AddFullscreenPass(
+			GraphBuilder,
+			GlobalShaderMap,
+			RDG_EVENT_NAME("BlurPS"),
+			PixelShader,
+			Parameters,
+			Viewport);
+		
+		// Set the previous input to be the current output
+		PreviousInput = OutputTexture;
+		
+		// Remove from the 5x5 kernel first, then from kernel 3x3
+		if(Kernel5X5Passes > 0)
+		{
+			Kernel5X5Passes--;
+		} else
+		{
+			Kernel3X3Passes--;
+		}
+		// Update the total pass count
+		TotalPasses = Kernel3X3Passes + Kernel5X5Passes;
+	};
 	
 	// Create the readback buffer if it doesn't exist, this will get reset when the copy has completed
 	if(!Readback.IsValid())
@@ -170,6 +233,7 @@ void FBlurSceneViewExtension::ProcessReadback()
 	// RHICmdList.CopyToStagingBuffer(SrcRHI, Staging, Offset, Size);
 	
 	// NOTE: The data coming out needs to match what you're expecting to put in the saved texture
+	// NOTE: This code works with textures that are set to the RGBA8 format or Compression Settings set to UserInterface2D
 	
 	// Setup the temporary array that will pass on the data
 	TArray64<uint8> PixelData;

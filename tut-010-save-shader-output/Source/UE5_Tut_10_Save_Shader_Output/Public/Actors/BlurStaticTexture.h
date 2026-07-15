@@ -17,11 +17,15 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API ABlurStaticTexture : public AActor
 public:
 	ABlurStaticTexture();
 
+	UPROPERTY(EditAnywhere, Category= "Blur", meta=(ClampMin="0.1", UIMin="0.1", ClampMax="100.0", UIMax="100.0"))
+	float BlurRadius = 1.0f;
+	
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	TObjectPtr<UTexture2D> SourceTexture;
 
+	
 	UPROPERTY(EditAnywhere, Category = "Blur")
-	FString OutputAssetPath = TEXT("/Game/BlurOutputs");
+	FString OutputAssetPath = TEXT("/Game");
 
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	FString OutputAssetNamePrefix = TEXT("T_BlurResult");
@@ -33,7 +37,6 @@ public:
 	void RunBlur();
 
 private:
-
 	ETextureSourceFormat SourceFormat;
 	EPixelFormat SourcePixelFormat;
 	

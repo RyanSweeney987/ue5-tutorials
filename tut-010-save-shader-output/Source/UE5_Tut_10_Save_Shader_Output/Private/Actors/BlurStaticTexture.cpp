@@ -38,11 +38,16 @@ void ABlurStaticTexture::RunBlur()
 		// Runtime GPU format (useful for readback assumptions)
 		SourcePixelFormat = SourceTexture->GetPixelFormat(); 
 		
-		Subsystem->QueueBlurRequest(SourceTexture.Get(), bDownloadImmediately);
+		Subsystem->QueueBlurRequest(SourceTexture.Get(), BlurRadius, bDownloadImmediately);
 	}
 }
 
 #if WITH_EDITOR
+/**
+ * NOTE: This code works with textures that are set to the RGBA8 format or Compression Settings set to UserInterface2D
+ * @param PixelData 
+ * @param Extent 
+ */
 void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& PixelData, const FIntPoint& Extent)
 {
 	if (PixelData.IsEmpty())
@@ -54,7 +59,7 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& Pix
 	FString AssetPath = OutputAssetPath;
 	if (!AssetPath.StartsWith(TEXT("/Game")))
 	{
-		AssetPath = TEXT("/Game/BlurOutputs");
+		AssetPath = TEXT("/Game");
 	}
 	AssetPath.RemoveFromEnd(TEXT("/"));
 

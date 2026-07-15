@@ -17,4 +17,7 @@ public:
 	DECLARE_EXPORTED_SHADER_TYPE(FBlurPS, Global, );
 	using FParameters = FBlurPSParam;
 	SHADER_USE_PARAMETER_STRUCT(FBlurPS, FGlobalShader);
+	
+	class FLargeKernel : SHADER_PERMUTATION_BOOL("LARGE_KERNEL");
+	using FPermutationDomain = TShaderPermutationDomain<FLargeKernel>;
 };
