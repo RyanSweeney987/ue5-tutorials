@@ -96,6 +96,7 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	const FSceneView& InView,
 	const FPostProcessingInputs& Inputs)
 {
+	// Check for any readback first
 	if(bHasPendingReadback)
 	{
 		// If the pointer isn't set, or if the readback extent is zero, early exit
@@ -146,10 +147,6 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	// Calculate the number of passes required
 	int32 Kernel3X3Passes = 0, Kernel5X5Passes = 0;
 	GetPassCounts(BlurRadius, Kernel3X3Passes, Kernel5X5Passes);
-	
-	// Create the final output texture, it should be the same as the input texture
-	
-	// const FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("BlurOutputTexture"));
 	
 	int32 TotalPasses = Kernel3X3Passes + Kernel5X5Passes;
 	
@@ -226,15 +223,16 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	SourceRHITexture = nullptr;
 }
 
+/**
+ * NOTE: The data coming out needs to match what you're expecting to put in the saved texture
+ * NOTE: This code works with textures that are set to the RGBA8 format or Compression Settings set to UserInterface2D
+ */
 void FBlurSceneViewExtension::ProcessReadback()
 {
 	// Pre UE 5.5 - lower level
 	// TRefCountPtr<FRHIStagingBuffer> Staging = RHICreateStagingBuffer();
 	// RHICmdList.CopyToStagingBuffer(SrcRHI, Staging, Offset, Size);
-	
-	// NOTE: The data coming out needs to match what you're expecting to put in the saved texture
-	// NOTE: This code works with textures that are set to the RGBA8 format or Compression Settings set to UserInterface2D
-	
+		
 	// Setup the temporary array that will pass on the data
 	TArray64<uint8> PixelData;
 	PixelData.SetNumZeroed(static_cast<int64>(ReadbackTextureExtent.X) * static_cast<int64>(ReadbackTextureExtent.Y) * 4);

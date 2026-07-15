@@ -23,6 +23,9 @@ ABlurStaticTexture::ABlurStaticTexture()
 	}
 }
 
+/**
+ * Offloads the work to a scene view extension
+ */
 void ABlurStaticTexture::RunBlur()
 {
 	if(!SourceTexture)
@@ -56,6 +59,7 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& Pix
 		return;
 	}
 
+	// Get path
 	FString AssetPath = OutputAssetPath;
 	if (!AssetPath.StartsWith(TEXT("/Game")))
 	{
@@ -63,11 +67,13 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& Pix
 	}
 	AssetPath.RemoveFromEnd(TEXT("/"));
 
+	// Get name 
 	const FString NamePrefix = OutputAssetNamePrefix.IsEmpty() ? TEXT("T_BlurResult") : OutputAssetNamePrefix;
 	const FString BasePackageName = FString::Printf(TEXT("%s/%s"), *AssetPath, *NamePrefix);
 
 	FString UniquePackageName;
 	FString UniqueAssetName;
+	// Make sure asset name is unique
 	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
 	AssetToolsModule.Get().CreateUniqueAssetName(BasePackageName, TEXT(""), UniquePackageName, UniqueAssetName);
 
