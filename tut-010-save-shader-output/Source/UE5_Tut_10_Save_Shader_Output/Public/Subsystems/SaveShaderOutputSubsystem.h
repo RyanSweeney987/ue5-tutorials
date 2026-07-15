@@ -17,21 +17,15 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API USaveShaderOutputSubsystem : public UEng
 	
 	TSharedPtr<FBlurSceneViewExtension, ESPMode::ThreadSafe> SceneViewExtension;
 	
-	FCriticalSection SourceTextureMutex;
-	TWeakObjectPtr<UTexture2D> SourceTexture;
-	
-	DECLARE_DELEGATE_OneParam(FOnReadbackComplete, const TArray64<uint8>&);
+	DECLARE_DELEGATE_TwoParams(FOnReadbackComplete, const TArray64<uint8>&, const FIntPoint& Extent);
 	FOnReadbackComplete OnReadbackCompleteDelegate;
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
 	static USaveShaderOutputSubsystem* Get();
-	
-	void SetSourceTexture_GameThread(UTexture2D* InTexture);
-	UTexture2D* ConsumeSourceTexture_RenderThread();
-	
-	bool IsSourceTextureSet() const;
+		
+	void QueueBlurRequest(UTexture* InTexture, const bool bInDownloadImmediately = false);
 	
 	FOnReadbackComplete& OnReadbackComplete() { return OnReadbackCompleteDelegate; }
 };

@@ -4,11 +4,15 @@
 #include "Subsystems/SaveShaderOutputSubsystem.h"
 
 #include "SceneViewExtension.h"
+#include "SceneViewExtensions/BlurSceneViewExtension.h"
 
 
 void USaveShaderOutputSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	SceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>();
+	SceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>([this](TArray64<uint8>& PixelData, FIntPoint& Extent)
+	{
+		OnReadbackCompleteDelegate.ExecuteIfBound(PixelData, Extent);
+	});
 }
 
 void USaveShaderOutputSubsystem::Deinitialize()
@@ -27,28 +31,7 @@ USaveShaderOutputSubsystem* USaveShaderOutputSubsystem::Get()
 	return nullptr;
 }
 
-void USaveShaderOutputSubsystem::SetSourceTexture_GameThread(UTexture2D* InTexture)
+void USaveShaderOutputSubsystem::QueueBlurRequest(UTexture* InTexture, const bool bInDownloadImmediately)
 {
-	FScopeLock Lock(&SourceTextureMutex);
-	SourceTexture = InTexture;
-}
-
-/**
- * We consume it so that in the scene view extension, we use it once
- * It should still be valid as it's stored in the actors TObjectPtr
- * @return the source texture
- */
-UTexture2D* USaveShaderOutputSubsystem::ConsumeSourceTexture_RenderThread()
-{
-	FScopeLock Lock(&SourceTextureMutex);
-	
-	UTexture2D* ConsumedTexture = SourceTexture.Get();
-	SourceTexture.Reset();
-	
-	return ConsumedTexture;
-}
-
-bool USaveShaderOutputSubsystem::IsSourceTextureSet() const
-{
-	return SourceTexture.IsValid();
+	SceneViewExtension->QueueBlurRequest_GameThread(InTexture, bInDownloadImmediately);
 }

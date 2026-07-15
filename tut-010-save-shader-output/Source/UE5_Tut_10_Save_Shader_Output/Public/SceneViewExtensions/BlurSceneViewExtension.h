@@ -11,18 +11,27 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 		
 	TUniquePtr<FRHIGPUTextureReadback> Readback;
 		
+	bool bHasQueuedTexture = true;
 	bool bImmediateFetch = false;
-	bool bHasPendingRequest = false;
+	bool bHasPendingReadback = false;
 	
-	TFunction<void(TArray<int32>&)> CallbackFunction;
+	FIntPoint ReadbackTextureExtent = FIntPoint::ZeroValue;
+	
+	TWeakObjectPtr<UTexture> SourceTexture;
+	FTextureRHIRef SourceRHITexture = nullptr;
+	
+	TFunction<void(TArray64<uint8>&, FIntPoint&)> CallbackFunction;
 public:
-	FBlurSceneViewExtension(const FAutoRegister& AutoRegister);
+	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
+	
+	void QueueBlurRequest_GameThread(UTexture* InTexture, const bool bInDownloadImmediately = false);
+	void SetCallbackFunction(const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
 	
 	//-----------------------------------------------------------------------------------
 	// Scene View Extension Implementation
 	//-----------------------------------------------------------------------------------
 	virtual void SetupViewFamily(FSceneViewFamily& InViewFamily) override {}
-	virtual void SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView) override {}
+	virtual void SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView) override;
 	// virtual void SetupViewPoint(APlayerController* Player, FMinimalViewInfo& InViewInfo) {}
 	// virtual void SetupViewProjectionMatrix(FSceneViewProjectionData& InOutProjectionData) {}
 	virtual void BeginRenderViewFamily(FSceneViewFamily& InViewFamily) override {}
@@ -38,4 +47,6 @@ public:
 	// virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override;
 
 	//-----------------------------------------------------------------------------
+private:
+	void ProcessReadback();
 };

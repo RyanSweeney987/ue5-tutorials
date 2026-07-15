@@ -18,7 +18,7 @@ public:
 	ABlurStaticTexture();
 
 	UPROPERTY(EditAnywhere, Category = "Blur")
-	TObjectPtr<UTexture> SourceTexture;
+	TObjectPtr<UTexture2D> SourceTexture;
 
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	FString OutputAssetPath = TEXT("/Game/BlurOutputs");
@@ -29,14 +29,16 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	bool bDownloadImmediately = false;
 
-	UFUNCTION(CallInEditor, Category = "Blur", DisplayName = "Run Blur and Save Texture")
-	void RunBlurAndSaveTexture();
+	UFUNCTION(CallInEditor, Category = "Blur", DisplayName = "Run Blur")
+	void RunBlur();
 
 private:
-	void EnqueueBlurRequest(TFunction<void(TArray64<uint8>&&, int32, int32)> InCallback, bool bInDownloadImmediately);
 
+	ETextureSourceFormat SourceFormat;
+	EPixelFormat SourcePixelFormat;
+	
 #if WITH_EDITOR
-	void SaveTextureAssetFromReadback(TArray64<uint8>&& PixelData, int32 Width, int32 Height);
+	void SaveTextureAssetFromReadback(const TArray64<uint8>& PixelData, const FIntPoint& Extent);
 #endif
 
 };

@@ -10,27 +10,57 @@
 #include "RenderGraphUtils.h"
 #include "RendererInterface.h"
 #include "ShaderPasses/BlurPS.h"
-#include "Subsystems/SaveShaderOutputSubsystem.h"
 
-FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister)
-	: FSceneViewExtensionBase(AutoRegister)
+// Useful link https://docs.clusterfact.games/docs/Snippets/
+
+FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction)
+	: FSceneViewExtensionBase(AutoRegister),
+	CallbackFunction(InCallbackFunction)
 {
 	// Only run if we have a texture applied to the scene view extension
 	IsActiveFunctor.IsActiveFunction = TSceneViewExtensionIsActiveFunction(
 		[this](const ISceneViewExtension* SceneViewExtension, const FSceneViewExtensionContext& Context)
 		{
-			const USaveShaderOutputSubsystem* SaveShaderOutputSubsystem = USaveShaderOutputSubsystem::Get();
-			if(!SaveShaderOutputSubsystem)
-			{
-				return TOptional<bool>(false);
-			}
-			
-			// Only run if we have a source texture set
-			return TOptional<bool>(SaveShaderOutputSubsystem->IsSourceTextureSet());
+			// Run if we have either a texture queued or a readback pending
+			return TOptional<bool>(bHasQueuedTexture || bHasPendingReadback);
 		}
 	);
 	
 	IsActiveThisFrameFunctions.Add(IsActiveFunctor);
+}
+
+void FBlurSceneViewExtension::QueueBlurRequest_GameThread(UTexture* InTexture, const bool bInDownloadImmediately)
+{
+	checkf(IsInGameThread(), TEXT("QueueBlurRequest_GameThread must be called from the game thread."));
+	
+	bHasQueuedTexture = true;
+	SourceTexture = InTexture;
+	ReadbackTextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
+	bImmediateFetch = bInDownloadImmediately;
+}
+
+void FBlurSceneViewExtension::SetCallbackFunction(const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction)
+{
+	CallbackFunction = InCallbackFunction;
+}
+
+void FBlurSceneViewExtension::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
+{
+	if(SourceTexture.IsValid())
+	{
+		if(const FTextureResource* Resource = SourceTexture->GetResource())
+		{
+			// Set the texture parameter for the scene view
+			SourceRHITexture = Resource->TextureRHI;
+		}
+		
+		// We have effectively consumed it so reset it
+		SourceTexture.Reset();
+	} else
+	{
+		// Make sure this is cleared as it should have already been used once
+		SourceRHITexture = nullptr;
+	}
 }
 
 void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
@@ -38,39 +68,63 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	const FSceneView& InView,
 	const FPostProcessingInputs& Inputs)
 {
-	USaveShaderOutputSubsystem* SaveShaderOutputSubsystem = USaveShaderOutputSubsystem::Get();
-	if (!SaveShaderOutputSubsystem)
+	if(bHasPendingReadback)
 	{
-		// Can't do anything so return
-		return;
-	}
+		// If the pointer isn't set, or if the readback extent is zero, early exit
+		if (!Readback.IsValid() || ReadbackTextureExtent.X <= 0 || ReadbackTextureExtent.Y <= 0)
+		{
+			Readback.Reset();
+			ReadbackTextureExtent = FIntPoint::ZeroValue;
+			bHasPendingReadback = false;
+			
+			// UE_LOG(LogTemp, Warning, TEXT("BlurSceneViewExtension: Readback not valid or extent is zero, readback cannot be performed."));
+			
+			return;
+		}
 
-	// Consume the source texture for the pass, this would then stop the pass from running
-	UTexture2D* SourceTexture = SaveShaderOutputSubsystem->ConsumeSourceTexture_RenderThread();
-	if (!SourceTexture || !SourceTexture->GetResource() || !SourceTexture->GetResource()->TextureRHI.IsValid())
-	{
-		// If it's not a valid texture, return
-		UE_LOG(LogTemp, Warning, TEXT("BlurSceneViewExtension: source texture is invalid."));
+		// If it's not ready, try again next pass
+		if (!Readback->IsReady())
+		{
+			return; 
+		}
+		
+		// Process the readback
+		ProcessReadback();
+		
+		ReadbackTextureExtent = FIntPoint::ZeroValue;
+		bHasPendingReadback = false;
+		
+		// We only wanted to do a readback here
 		return;
 	}
-	// Get the underlying RHI for the texture so we can actually use it in the shader
-	const FTextureRHIRef SourceTextureRHI = SourceTexture->GetResource()->TextureRHI;
+	
+	// Check if we have a source texture
+	if(!SourceRHITexture.IsValid())
+	{
+		// Commented out to prevent log polution
+		// UE_LOG(LogTemp, Warning, TEXT("BlurSceneViewExtension: Source RHI texture not set"));
+		return;
+	}
+	
 	// The size of the texture will be used as the render viewport size
-	const FIntPoint TextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
+	const FIntPoint TextureExtent = FIntPoint(SourceRHITexture->GetSizeX(), SourceRHITexture->GetSizeY());
 	const FIntRect Viewport = FIntRect(0, 0, TextureExtent.X, TextureExtent.Y);
 	
 	const FGlobalShaderMap* GlobalShaderMap = GetGlobalShaderMap(GMaxRHIFeatureLevel);
 
 	// Create the source texture ref
-	const FRDGTextureRef InputTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(SourceTextureRHI, TEXT("BlurInputTexture")));
+	const FRDGTextureRef InputTexture = GraphBuilder.RegisterExternalTexture(CreateRenderTarget(SourceRHITexture, TEXT("BlurInputTexture")));
 
 	// Create the output texture, it should be the same as the input texture
-	const FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(InputTexture->Desc, TEXT("BlurOutputTexture"));
+	FRDGTextureDesc OutputTextureDesc = InputTexture->Desc;
+	OutputTextureDesc.Flags |= TexCreate_RenderTargetable | TexCreate_ShaderResource;
+	const FRDGTextureRef OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("BlurOutputTexture"));
 
 	// Setup parameters
 	FBlurPS::FParameters* Parameters = GraphBuilder.AllocParameters<FBlurPS::FParameters>();
 	Parameters->InputTexture = InputTexture;
 	Parameters->InputSampler = TStaticSamplerState<SF_Bilinear>::GetRHI();
+	Parameters->TexelSize = FVector2f(1.0f / TextureExtent.X, 1.0f / TextureExtent.Y);
 	Parameters->RenderTargets[0] = FRenderTargetBinding(OutputTexture, ERenderTargetLoadAction::ENoAction);
 	
 	// Run the shader
@@ -82,93 +136,77 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 		PixelShader,
 		Parameters,
 		Viewport);
-
-	// Enqueue a readback
 	
-	// We have 2 paths here - async readback which is the more performant way to do it
-	// However it could be a few frames until you get your results back
-	// Or we do it immediately, this will lock up the CPU until the GPU catches up
-	
-	// Create the readback buffer if it doesn't exist
-	// This will get reset when the copy has completed
+	// Create the readback buffer if it doesn't exist, this will get reset when the copy has completed
 	if(!Readback.IsValid())
 	{
 		Readback = MakeUnique<FRHIGPUTextureReadback>(TEXT("BlurOutputReadback"));
 	}
 	
+	// Enqueue a readback
 	AddEnqueueCopyPass(GraphBuilder, Readback.Get(), OutputTexture);
 	
-	// If immediate fetch is enabled - lock straight away and get the data
 	if(bImmediateFetch)
 	{
-		int32 RowPitchInPixels = 0;
-		if(const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
-		{
-			TArray64<uint8> PixelData;
-			PixelData.SetNumZeroed(static_cast<int64>(TextureExtent.X) * static_cast<int64>(TextureExtent.Y) * 4);
-			
-			const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
-			const int64 DestRowBytes = static_cast<int64>(TextureExtent.X) * 4;
-			const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
-			
-			for (int32 Row = 0; Row < TextureExtent.Y; ++Row)
-			{
-				FMemory::Memcpy(
-					PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
-					SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
-					DestRowBytes);
-			}
-			
-			// Process the data
-			Readback->Unlock();
-		}
-		
-		return;
+		// If immediate fetch is enabled, process it straight away, otherwise we check if it's ready 
+		// at the beginning of the function
+		ProcessReadback();
+	} else
+	{
+		// Set this to true so we can still run the scene view extension
+		bHasPendingReadback = true;
 	}
 	
-	
-	// Otherwise set up the async task to perform the fetch when it's ready
-	
-	// https://docs.clusterfact.games/docs/Snippets/
-	// Pre 5.5 - lower level
-	//TRefCountPtr<FRHIStagingBuffer> Staging = RHICreateStagingBuffer();
+	// We no longer have a queued texture as we have used it
+	bHasQueuedTexture = false;
+	// Reset this as we have effectively consumed it
+	SourceRHITexture = nullptr;
+}
+
+void FBlurSceneViewExtension::ProcessReadback()
+{
+	// Pre UE 5.5 - lower level
+	// TRefCountPtr<FRHIStagingBuffer> Staging = RHICreateStagingBuffer();
 	// RHICmdList.CopyToStagingBuffer(SrcRHI, Staging, Offset, Size);
 	
-	// Async readback
+	// NOTE: The data coming out needs to match what you're expecting to put in the saved texture
 	
+	// Setup the temporary array that will pass on the data
+	TArray64<uint8> PixelData;
+	PixelData.SetNumZeroed(static_cast<int64>(ReadbackTextureExtent.X) * static_cast<int64>(ReadbackTextureExtent.Y) * 4);
 	
-	// Readback or setting texture data found somewhere to do with PNG - ImageUtils
-	
-	AsyncTask(ENamedThreads::AnyBackgroundThreadNormalTask,[Readback,TextureExtent, Callback = MoveTemp(LocalCallback)]() mutable
+	// Read the data
+	int32 RowPitchInPixels = 0;
+	if (const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
 	{
-		TArray64<uint8> PixelData;
-		PixelData.SetNumZeroed(static_cast<int64>(TextureExtent.X) * static_cast<int64>(TextureExtent.Y) * 4);
+		// Get the starting position
+		const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
+		const int64 DestRowBytes = static_cast<int64>(ReadbackTextureExtent.X) * 4;
+		const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
 	
-		int32 RowPitchInPixels = 0;
-			// Calling this after execute would force the CPU to wait for the GPU to catch up
-		if (void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
+		for (int32 Row = 0; Row < ReadbackTextureExtent.Y; ++Row)
 		{
-			const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
-			const int64 DestRowBytes = static_cast<int64>(TextureExtent.X) * 4;
-			const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
-	
-			for (int32 Row = 0; Row < TextureExtent.Y; ++Row)
-			{
-				FMemory::Memcpy(
-					PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
-					SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
-					DestRowBytes);
-			}
-	
-			Readback->Unlock();
+			// Copy the data
+			FMemory::Memcpy(PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
+				SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
+				DestRowBytes);
 		}
 	
-		AsyncTask(ENamedThreads::GameThread, [Callback = MoveTemp(Callback), PixelData = MoveTemp(PixelData), TextureExtent]() mutable
-			{
-				if (Callback)
-				{
-					Callback(MoveTemp(PixelData), TextureExtent.X, TextureExtent.Y);
-				}
-			});
+		Readback->Unlock();
+		// Clear the readback pointer now that we're done with it
+		Readback.Reset();
+	}
+	
+	TFunction<void(TArray64<uint8>&, FIntPoint&)> LocalCallback = CallbackFunction;
+	FIntPoint LocalExtent = ReadbackTextureExtent;
+	// When it's done, return the results to the callback function
+	AsyncTask(ENamedThreads::GameThread, [PixelData = MoveTemp(PixelData), LocalExtent, Callback = MoveTemp(LocalCallback)]() mutable
+	{
+		if(Callback)
+		{
+			Callback(PixelData, LocalExtent);
+		}
 	});
 }
+
+

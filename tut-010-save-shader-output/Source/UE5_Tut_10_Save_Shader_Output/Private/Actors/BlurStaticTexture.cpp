@@ -7,67 +7,45 @@
 #include "Modules/ModuleManager.h"
 #include "RHICommandList.h"
 #include "SceneViewExtension.h"
+#include "Factories/Texture2dFactoryNew.h"
 #include "SceneViewExtensions/BlurSceneViewExtension.h"
+#include "Subsystems/SaveShaderOutputSubsystem.h"
 #include "UObject/Package.h"
 #include "UObject/SavePackage.h"
 
 ABlurStaticTexture::ABlurStaticTexture()
 {
 	PrimaryActorTick.bCanEverTick = false;
+	
+	if(USaveShaderOutputSubsystem* Subsystem = USaveShaderOutputSubsystem::Get())
+	{
+		Subsystem->OnReadbackComplete().BindUObject(this, &ABlurStaticTexture::SaveTextureAssetFromReadback);
+	}
 }
 
-void ABlurStaticTexture::RunBlurAndSaveTexture()
+void ABlurStaticTexture::RunBlur()
 {
-	if (!SourceTexture)
-	{
+	if(!SourceTexture)
+	{	
 		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: SourceTexture is not set."));
 		return;
 	}
 	
-	TWeakObjectPtr<ABlurStaticTexture> WeakThis(this);
-	EnqueueBlurRequest(
-		[WeakThis](TArray64<uint8>&& PixelData, int32 Width, int32 Height) mutable
-		{
-			if (!WeakThis.IsValid())
-			{
-				return;
-			}
-
-#if WITH_EDITOR
-			WeakThis->SaveTextureAssetFromReadback(MoveTemp(PixelData), Width, Height);
-#endif
-		},
-		bDownloadImmediately);
-}
-
-void ABlurStaticTexture::EnqueueBlurRequest(
-	TFunction<void(TArray64<uint8>&&, int32, int32)> InCallback,
-	const bool bInDownloadImmediately)
-{
-	if (!BlurSceneViewExtension.IsValid())
+	if(USaveShaderOutputSubsystem* Subsystem = USaveShaderOutputSubsystem::Get())
 	{
-		return;
+		// CPU/source format (for NewTexture->Source.Init)
+		SourceFormat = SourceTexture->Source.GetFormat();
+		// Runtime GPU format (useful for readback assumptions)
+		SourcePixelFormat = SourceTexture->GetPixelFormat(); 
+		
+		Subsystem->QueueBlurRequest(SourceTexture.Get(), bDownloadImmediately);
 	}
-
-	TSharedPtr<FBlurSceneViewExtension, ESPMode::ThreadSafe> LocalExtension = BlurSceneViewExtension;
-	ENQUEUE_RENDER_COMMAND(QueueBlurSceneViewRequest)(
-		[LocalExtension, Callback = MoveTemp(InCallback), bInDownloadImmediately](FRHICommandListImmediate& RHICmdList) mutable
-		{
-			(void)RHICmdList;
-
-			if (!LocalExtension.IsValid())
-			{
-				return;
-			}
-
-			LocalExtension->QueueBlurRequest_RenderThread(MoveTemp(Callback), bInDownloadImmediately);
-		});
 }
 
 #if WITH_EDITOR
-void ABlurStaticTexture::SaveTextureAssetFromReadback(TArray64<uint8>&& PixelData, int32 Width, int32 Height)
+void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& PixelData, const FIntPoint& Extent)
 {
-	if (PixelData.IsEmpty() || Width <= 0 || Height <= 0)
+	if (PixelData.IsEmpty())
 	{
 		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Invalid readback data."));
 		return;
@@ -101,18 +79,17 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(TArray64<uint8>&& PixelDat
 		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Failed to allocate output texture."));
 		return;
 	}
-
+	
 	NewTexture->MipGenSettings = TMGS_NoMipmaps;
 	NewTexture->CompressionSettings = TC_Default;
 	NewTexture->SRGB = true;
-	NewTexture->Source.Init(Width, Height, 1, 1, TSF_RGBA16F, PixelData.GetData());
+	NewTexture->Source.Init(Extent.X, Extent.Y, 1, 1, SourceFormat, PixelData.GetData());
 	NewTexture->UpdateResource();
 
 	FAssetRegistryModule::AssetCreated(NewTexture);
 	Package->MarkPackageDirty();
 
-	const FString PackageFilename =
-		FPackageName::LongPackageNameToFilename(UniquePackageName, FPackageName::GetAssetPackageExtension());
+	const FString PackageFilename = FPackageName::LongPackageNameToFilename(UniquePackageName, FPackageName::GetAssetPackageExtension());
 	FSavePackageArgs SaveArgs;
 	SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
 	if (!UPackage::SavePackage(Package, NewTexture, *PackageFilename, SaveArgs))
