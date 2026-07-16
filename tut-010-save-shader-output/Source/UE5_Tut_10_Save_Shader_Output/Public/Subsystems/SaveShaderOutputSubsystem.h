@@ -3,10 +3,10 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Data/BlurRequests.h"
 #include "Subsystems/EngineSubsystem.h"
 #include "SaveShaderOutputSubsystem.generated.h"
 
-struct FBlurRequestData;
 class FBlurSceneViewExtension;
 
 /**

@@ -24,8 +24,8 @@ struct FBlurRequestData
 	
 	FBlurRequestData(UTexture2D* InTexture, const float InBlurRadius, const bool bInDownloadImmediately = false)
 		: Texture(InTexture)
-		, BlurRadius(InBlurRadius)
 		, bInDownloadImmediately(bInDownloadImmediately)
+		, BlurRadius(InBlurRadius)
 	{
 		if (Texture)
 		{
@@ -36,8 +36,8 @@ struct FBlurRequestData
 	
 	FBlurRequestData(UTexture2D* InTexture, const float InBlurRadius, const bool bInDownloadImmediately, const FString& InOutputAssetPath, const FString& InOutputAssetNamePrefix)
 		: Texture(InTexture)
-		, BlurRadius(InBlurRadius)
 		, bInDownloadImmediately(bInDownloadImmediately)
+		, BlurRadius(InBlurRadius)
 		, OutputAssetPath(InOutputAssetPath)
 		, OutputAssetNamePrefix(InOutputAssetNamePrefix)
 	{

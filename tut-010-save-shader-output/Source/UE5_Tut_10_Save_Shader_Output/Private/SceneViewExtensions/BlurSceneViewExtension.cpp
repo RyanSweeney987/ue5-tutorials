@@ -41,9 +41,8 @@ void GetPassCounts(const float BlurRadius, int32& Kernel3X3Passes, int32& Kernel
 	}
 }
 
-FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction)
-	: FSceneViewExtensionBase(AutoRegister),
-	CallbackFunction(InCallbackFunction)
+FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister)
+	: FSceneViewExtensionBase(AutoRegister)
 {
 	// Only run if we have a texture applied to the scene view extension
 	IsActiveFunctor.IsActiveFunction = TSceneViewExtensionIsActiveFunction(
@@ -66,11 +65,6 @@ void FBlurSceneViewExtension::QueueBlurRequest_GameThread(const FBlurRequestData
 	SourceTexture = BlurRequestData.Texture;
 	ReadbackTextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
 	bImmediateFetch = BlurRequestData.bInDownloadImmediately;
-}
-
-void FBlurSceneViewExtension::SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction)
-{
-	CallbackFunction = InCallbackFunction;
 }
 
 void FBlurSceneViewExtension::SetupView(FSceneViewFamily& InViewFamily, FSceneView& InView)
@@ -274,15 +268,11 @@ void FBlurSceneViewExtension::ProcessReadback()
 		Readback.Reset();
 	}
 	
-	TFunction<void(TArray64<float>&, FIntPoint&)> LocalCallback = CallbackFunction;
 	FIntPoint LocalExtent = ReadbackTextureExtent;
 	// When it's done, return the results to the callback function
-	AsyncTask(ENamedThreads::GameThread, [PixelData = MoveTemp(PixelData), LocalExtent, Callback = MoveTemp(LocalCallback)]() mutable
+	AsyncTask(ENamedThreads::GameThread, [this, PixelData = MoveTemp(PixelData), LocalExtent]() mutable
 	{
-		if(Callback)
-		{
-			Callback(PixelData, LocalExtent);
-		}
+		OnBlurRequestCompletedDelegate.ExecuteIfBound(PixelData, LocalExtent);
 	});
 }
 

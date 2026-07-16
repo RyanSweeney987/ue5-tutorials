@@ -23,12 +23,12 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 	TWeakObjectPtr<UTexture> SourceTexture;
 	FTextureRHIRef SourceRHITexture = nullptr;
 	
-	TFunction<void(TArray64<float>&, FIntPoint&)> CallbackFunction;
+	DECLARE_DELEGATE_TwoParams(FOnBlurRequestCompleted, const TArray64<float>&, const FIntPoint&);
+	FOnBlurRequestCompleted OnBlurRequestCompletedDelegate;
 public:
-	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
+	FBlurSceneViewExtension(const FAutoRegister& AutoRegister);
 	
 	void QueueBlurRequest_GameThread(const FBlurRequestData& BlurRequestData);
-	void SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
 	
 	//-----------------------------------------------------------------------------------
 	// Scene View Extension Implementation
@@ -50,6 +50,8 @@ public:
 	// virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override;
 
 	//-----------------------------------------------------------------------------
+	
+	FOnBlurRequestCompleted& OnBlurRequestCompleted() { return OnBlurRequestCompletedDelegate; }
 private:
 	void ProcessReadback();
 };

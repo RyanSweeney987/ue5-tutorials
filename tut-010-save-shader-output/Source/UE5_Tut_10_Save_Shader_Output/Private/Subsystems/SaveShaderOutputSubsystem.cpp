@@ -13,15 +13,22 @@
 
 void USaveShaderOutputSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-	// The lambda is because the SVE takes in an TFunction that gets called in the SVE, this is to pass the results to
-	SceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>([this](TArray64<float>& PixelData, FIntPoint& Extent)
+
+	SceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>();
+	SceneViewExtension->OnBlurRequestCompleted().BindLambda([this](const TArray64<float>& PixelData, const FIntPoint& Extent)
 	{
+#if WITH_EDITOR
+		// This is an editor only function
 		// So this takes the results from the SVE and process it here
 		SaveTextureAssetFromReadback(PixelData, Extent);
+#else
+		UE_LOG(LogTemp, Warning, TEXT("SaveShaderOutputSubsystem: SaveTextureAssetFromReadback is only available in the editor."));
+#endif
 		
 		// Once we're done, clear the blur request so we can add a new one
 		CurrentBlurRequest.Reset();
 	});
+	
 }
 
 void USaveShaderOutputSubsystem::Deinitialize()
@@ -54,6 +61,7 @@ void USaveShaderOutputSubsystem::QueueBlurRequest(const FBlurRequestData& BlurRe
 	SceneViewExtension->QueueBlurRequest_GameThread(BlurRequestData);
 }
 
+#if WITH_EDITOR
 void USaveShaderOutputSubsystem::SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent)
 {
 	checkf(CurrentBlurRequest.IsSet(), TEXT("No current blur request is set. This function should only be called after a blur request has been processed."));
@@ -117,3 +125,4 @@ void USaveShaderOutputSubsystem::SaveTextureAssetFromReadback(const TArray64<flo
 
 	UE_LOG(LogTemp, Display, TEXT("BlurStaticTexture: Saved blurred texture '%s'"), *UniquePackageName);
 }
+#endif
