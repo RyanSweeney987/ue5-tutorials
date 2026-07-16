@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "SceneViewExtension.h"
 
+struct FBlurRequestData;
 class UTexture;
 
 class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public FSceneViewExtensionBase
@@ -26,7 +27,7 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 public:
 	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
 	
-	void QueueBlurRequest_GameThread(UTexture* InTexture, const float InBlurRadius, const bool bInDownloadImmediately = false);
+	void QueueBlurRequest_GameThread(const FBlurRequestData& BlurRequestData);
 	void SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
 	
 	//-----------------------------------------------------------------------------------

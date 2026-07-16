@@ -9,6 +9,7 @@
 #include "RenderGraphBuilder.h"
 #include "RenderGraphUtils.h"
 #include "RendererInterface.h"
+#include "Data/BlurRequests.h"
 #include "ShaderPasses/BlurPS.h"
 
 // Useful link https://docs.clusterfact.games/docs/Snippets/
@@ -56,15 +57,15 @@ FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegist
 	IsActiveThisFrameFunctions.Add(IsActiveFunctor);
 }
 
-void FBlurSceneViewExtension::QueueBlurRequest_GameThread(UTexture* InTexture, const float InBlurRadius, const bool bInDownloadImmediately)
+void FBlurSceneViewExtension::QueueBlurRequest_GameThread(const FBlurRequestData& BlurRequestData)
 {
 	checkf(IsInGameThread(), TEXT("QueueBlurRequest_GameThread must be called from the game thread."));
 	
 	bHasQueuedTexture = true;
-	BlurRadius = InBlurRadius;
-	SourceTexture = InTexture;
+	BlurRadius = BlurRequestData.BlurRadius;
+	SourceTexture = BlurRequestData.Texture;
 	ReadbackTextureExtent = FIntPoint(SourceTexture->GetSurfaceWidth(), SourceTexture->GetSurfaceHeight());
-	bImmediateFetch = bInDownloadImmediately;
+	bImmediateFetch = BlurRequestData.bInDownloadImmediately;
 }
 
 void FBlurSceneViewExtension::SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction)

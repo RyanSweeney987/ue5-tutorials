@@ -3,15 +3,24 @@
 
 #include "Subsystems/SaveShaderOutputSubsystem.h"
 
+#include "AssetToolsModule.h"
 #include "SceneViewExtension.h"
+#include "AssetRegistry/AssetRegistryModule.h"
+#include "Data/BlurRequests.h"
 #include "SceneViewExtensions/BlurSceneViewExtension.h"
+#include "UObject/SavePackage.h"
 
 
 void USaveShaderOutputSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
+	// The lambda is because the SVE takes in an TFunction that gets called in the SVE, this is to pass the results to
 	SceneViewExtension = FSceneViewExtensions::NewExtension<FBlurSceneViewExtension>([this](TArray64<float>& PixelData, FIntPoint& Extent)
 	{
-		OnReadbackCompleteDelegate.ExecuteIfBound(PixelData, Extent);
+		// So this takes the results from the SVE and process it here
+		SaveTextureAssetFromReadback(PixelData, Extent);
+		
+		// Once we're done, clear the blur request so we can add a new one
+		CurrentBlurRequest.Reset();
 	});
 }
 
@@ -31,8 +40,80 @@ USaveShaderOutputSubsystem* USaveShaderOutputSubsystem::Get()
 	return nullptr;
 }
 
-void USaveShaderOutputSubsystem::QueueBlurRequest(UTexture* InTexture, const float BlurRadius, const bool bInDownloadImmediately)
+void USaveShaderOutputSubsystem::QueueBlurRequest(const FBlurRequestData& BlurRequestData)
 {
-	checkf(BlurRadius >= 0.1f && BlurRadius <= 1000.0f, TEXT("BlurRadius must be between 0.1 and 100.0 inclusive"));
-	SceneViewExtension->QueueBlurRequest_GameThread(InTexture, BlurRadius, bInDownloadImmediately);
+	checkf(BlurRequestData.BlurRadius >= 0.1f && BlurRequestData.BlurRadius <= 1000.0f, TEXT("BlurRadius must be between 0.1 and 100.0 inclusive"));
+	
+	if(CurrentBlurRequest.IsSet())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Blur request is already in progress. New request will be ignored."));
+		return;
+	}
+	
+	CurrentBlurRequest = BlurRequestData;
+	SceneViewExtension->QueueBlurRequest_GameThread(BlurRequestData);
+}
+
+void USaveShaderOutputSubsystem::SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent)
+{
+	checkf(CurrentBlurRequest.IsSet(), TEXT("No current blur request is set. This function should only be called after a blur request has been processed."));
+	
+	if (PixelData.IsEmpty())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Invalid readback data."));
+		return;
+	}
+
+	// Get path
+	FString AssetPath = CurrentBlurRequest->OutputAssetPath;
+	if (!AssetPath.StartsWith(TEXT("/Game")))
+	{
+		AssetPath = TEXT("/Game");
+	}
+	AssetPath.RemoveFromEnd(TEXT("/"));
+
+	// Get name 
+	const FString NamePrefix = CurrentBlurRequest->OutputAssetNamePrefix.IsEmpty() ? TEXT("T_BlurResult") : CurrentBlurRequest->OutputAssetNamePrefix;
+	const FString BasePackageName = FString::Printf(TEXT("%s/%s"), *AssetPath, *NamePrefix);
+
+	FString UniquePackageName;
+	FString UniqueAssetName;
+	// Make sure asset name is unique
+	FAssetToolsModule& AssetToolsModule = FModuleManager::LoadModuleChecked<FAssetToolsModule>("AssetTools");
+	AssetToolsModule.Get().CreateUniqueAssetName(BasePackageName, TEXT(""), UniquePackageName, UniqueAssetName);
+
+	UPackage* Package = CreatePackage(*UniquePackageName);
+	if (!Package)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Failed to create package %s"), *UniquePackageName);
+		return;
+	}
+
+	UTexture2D* NewTexture = NewObject<UTexture2D>(Package, *UniqueAssetName, RF_Public | RF_Standalone);
+	if (!NewTexture)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Failed to allocate output texture."));
+		return;
+	}
+	
+	NewTexture->MipGenSettings = TMGS_NoMipmaps;
+	NewTexture->CompressionSettings = TC_HDR_F32;
+	NewTexture->SRGB = false;
+	NewTexture->Source.Init(Extent.X, Extent.Y, 1, 1, 
+		TSF_RGBA32F, reinterpret_cast<const uint8*>(PixelData.GetData()));
+	NewTexture->UpdateResource();
+
+	FAssetRegistryModule::AssetCreated(NewTexture);
+	Package->MarkPackageDirty();
+
+	const FString PackageFilename = FPackageName::LongPackageNameToFilename(UniquePackageName, FPackageName::GetAssetPackageExtension());
+	FSavePackageArgs SaveArgs;
+	SaveArgs.TopLevelFlags = RF_Public | RF_Standalone;
+	if (!UPackage::SavePackage(Package, NewTexture, *PackageFilename, SaveArgs))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BlurStaticTexture: Failed to save package %s"), *PackageFilename);
+		return;
+	}
+
+	UE_LOG(LogTemp, Display, TEXT("BlurStaticTexture: Saved blurred texture '%s'"), *UniquePackageName);
 }

@@ -6,7 +6,9 @@
 #include "Subsystems/EngineSubsystem.h"
 #include "SaveShaderOutputSubsystem.generated.h"
 
+struct FBlurRequestData;
 class FBlurSceneViewExtension;
+
 /**
  * 
  */
@@ -15,17 +17,18 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API USaveShaderOutputSubsystem : public UEng
 {
 	GENERATED_BODY()
 	
-	TSharedPtr<FBlurSceneViewExtension, ESPMode::ThreadSafe> SceneViewExtension;
+private:
+	TOptional<FBlurRequestData> CurrentBlurRequest;
 	
-	DECLARE_DELEGATE_TwoParams(FOnReadbackComplete, const TArray64<float>&, const FIntPoint& Extent);
-	FOnReadbackComplete OnReadbackCompleteDelegate;
+	TSharedPtr<FBlurSceneViewExtension, ESPMode::ThreadSafe> SceneViewExtension;
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 	
 	static USaveShaderOutputSubsystem* Get();
 		
-	void QueueBlurRequest(UTexture* InTexture, const float BlurRadius, const bool bInDownloadImmediately = false);
-	
-	FOnReadbackComplete& OnReadbackComplete() { return OnReadbackCompleteDelegate; }
+	void QueueBlurRequest(const FBlurRequestData& BlurRequestData);
+#if WITH_EDITOR
+	void SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent);
+#endif
 };

@@ -11,11 +11,7 @@ UCLASS()
 class UE5_TUT_10_SAVE_SHADER_OUTPUT_API ABlurStaticTexture : public AActor
 {
 	GENERATED_BODY()
-	
-private:
-	ETextureSourceFormat SourceFormat;
-	EPixelFormat SourcePixelFormat;
-	
+
 public:
 	UPROPERTY(EditAnywhere, Category= "Blur", meta=(ClampMin="0.1", UIMin="0.1", ClampMax="1000.0", UIMax="1000.0"))
 	float BlurRadius = 1.0f;
@@ -36,11 +32,5 @@ public:
 	ABlurStaticTexture();
 	
 	UFUNCTION(CallInEditor, Category = "Blur", DisplayName = "Run Blur (SceneViewExtension)")
-	void RunBlur();
-
-private:
-#if WITH_EDITOR
-	void SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent);
-#endif
-
+	void RunBlur() const;
 };
