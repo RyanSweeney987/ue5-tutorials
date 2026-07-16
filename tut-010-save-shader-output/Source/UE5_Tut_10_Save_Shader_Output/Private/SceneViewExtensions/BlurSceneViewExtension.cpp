@@ -207,18 +207,19 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 		// If immediate fetch is enabled, process it straight away, otherwise we check if it's ready 
 		// at the beginning of the function which runs every frame when enabled
 		GraphBuilder.AddPass(
-		   RDG_EVENT_NAME("BlurReadbackSync"),
-		   ERDGPassFlags::None,
-		   [this](FRHICommandListImmediate& RHICmdList)
-		   {
-			   // Force all queued GPU work (including the copy) to complete now
-			   RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
-			   RHICmdList.BlockUntilGPUIdle();
-
-			   ProcessReadback();
-			   ReadbackTextureExtent = FIntPoint::ZeroValue;
-			   bHasPendingReadback = false;
-		   });
+		    RDG_EVENT_NAME("BlurReadbackSync"),
+		    ERDGPassFlags::None,
+		    [this](FRHICommandListImmediate& RHICmdList)
+		    {
+				// Force all queued GPU work (including the copy) to complete now
+				RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
+				RHICmdList.BlockUntilGPUIdle();
+		    	// Like using FlushRenderingCommands() if using ENQUEUE_RENDER_COMMANDS on the game thread
+	
+				ProcessReadback();
+				ReadbackTextureExtent = FIntPoint::ZeroValue;
+				bHasPendingReadback = false;
+		    });
 	} else
 	{
 		// Set this to true so we can still run the scene view extension
@@ -247,17 +248,19 @@ void FBlurSceneViewExtension::ProcessReadback()
 	
 	// Read the data
 	int32 RowPitchInPixels = 0;
-	if (const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
+	if(const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
 	{
 		// Get the starting position
 		const float* SourcePtr = static_cast<const float*>(ReadbackData);
+		// Number of bytes for our destination row, multiplied by 4 channels
 		const int64 DestRowBytes = static_cast<int64>(ReadbackTextureExtent.X) * 4;
+		// Number of bytes in our source (readback) row, multiplied by channels
 		const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
 	
+		// Iterate over the data and copy each row
 		for (int32 Row = 0; Row < ReadbackTextureExtent.Y; ++Row)
 		{
-			// Copy the data
-			// Make sure to take into account the size of each color element
+			// Copy the data and make sure to take into account the size of each color element
 			FMemory::Memcpy(PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
 				SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
 				DestRowBytes * sizeof(float));
