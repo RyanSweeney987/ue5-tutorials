@@ -17,12 +17,11 @@ private:
 	EPixelFormat SourcePixelFormat;
 	
 public:
-	UPROPERTY(EditAnywhere, Category= "Blur", meta=(ClampMin="0.1", UIMin="0.1", ClampMax="100.0", UIMax="100.0"))
+	UPROPERTY(EditAnywhere, Category= "Blur", meta=(ClampMin="0.1", UIMin="0.1", ClampMax="1000.0", UIMax="1000.0"))
 	float BlurRadius = 1.0f;
 	
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	TObjectPtr<UTexture2D> SourceTexture;
-
 	
 	UPROPERTY(EditAnywhere, Category = "Blur")
 	FString OutputAssetPath = TEXT("/Game");
@@ -41,7 +40,7 @@ public:
 
 private:
 #if WITH_EDITOR
-	void SaveTextureAssetFromReadback(const TArray64<uint8>& PixelData, const FIntPoint& Extent);
+	void SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent);
 #endif
 
 };

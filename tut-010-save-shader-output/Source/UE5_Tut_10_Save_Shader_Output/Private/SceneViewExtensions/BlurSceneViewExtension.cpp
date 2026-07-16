@@ -40,7 +40,7 @@ void GetPassCounts(const float BlurRadius, int32& Kernel3X3Passes, int32& Kernel
 	}
 }
 
-FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction)
+FBlurSceneViewExtension::FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction)
 	: FSceneViewExtensionBase(AutoRegister),
 	CallbackFunction(InCallbackFunction)
 {
@@ -67,7 +67,7 @@ void FBlurSceneViewExtension::QueueBlurRequest_GameThread(UTexture* InTexture, c
 	bImmediateFetch = bInDownloadImmediately;
 }
 
-void FBlurSceneViewExtension::SetCallbackFunction(const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction)
+void FBlurSceneViewExtension::SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction)
 {
 	CallbackFunction = InCallbackFunction;
 }
@@ -157,6 +157,7 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	{
 		// Create the output texture, it should be the same as the input texture
 		FRDGTextureDesc OutputTextureDesc = InputTexture->Desc;
+		OutputTextureDesc.Format = PF_A32B32G32R32F; // Use a float format to avoid precision loss
 		OutputTextureDesc.Flags |= TexCreate_RenderTargetable | TexCreate_ShaderResource;
 		OutputTexture = GraphBuilder.CreateTexture(OutputTextureDesc, TEXT("OutputTexture"));
 		
@@ -209,8 +210,20 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	if(bImmediateFetch)
 	{
 		// If immediate fetch is enabled, process it straight away, otherwise we check if it's ready 
-		// at the beginning of the function
-		ProcessReadback();
+		// at the beginning of the function which runs every frame when enabled
+		GraphBuilder.AddPass(
+		   RDG_EVENT_NAME("BlurReadbackSync"),
+		   ERDGPassFlags::None,
+		   [this](FRHICommandListImmediate& RHICmdList)
+		   {
+			   // Force all queued GPU work (including the copy) to complete now
+			   RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
+			   RHICmdList.BlockUntilGPUIdle();
+
+			   ProcessReadback();
+			   ReadbackTextureExtent = FIntPoint::ZeroValue;
+			   bHasPendingReadback = false;
+		   });
 	} else
 	{
 		// Set this to true so we can still run the scene view extension
@@ -234,7 +247,7 @@ void FBlurSceneViewExtension::ProcessReadback()
 	// RHICmdList.CopyToStagingBuffer(SrcRHI, Staging, Offset, Size);
 		
 	// Setup the temporary array that will pass on the data
-	TArray64<uint8> PixelData;
+	TArray64<float> PixelData;
 	PixelData.SetNumZeroed(static_cast<int64>(ReadbackTextureExtent.X) * static_cast<int64>(ReadbackTextureExtent.Y) * 4);
 	
 	// Read the data
@@ -242,16 +255,17 @@ void FBlurSceneViewExtension::ProcessReadback()
 	if (const void* ReadbackData = Readback->Lock(RowPitchInPixels, nullptr))
 	{
 		// Get the starting position
-		const uint8* SourcePtr = static_cast<const uint8*>(ReadbackData);
+		const float* SourcePtr = static_cast<const float*>(ReadbackData);
 		const int64 DestRowBytes = static_cast<int64>(ReadbackTextureExtent.X) * 4;
 		const int64 SourceRowBytes = static_cast<int64>(RowPitchInPixels) * 4;
 	
 		for (int32 Row = 0; Row < ReadbackTextureExtent.Y; ++Row)
 		{
 			// Copy the data
+			// Make sure to take into account the size of each color element
 			FMemory::Memcpy(PixelData.GetData() + (static_cast<int64>(Row) * DestRowBytes),
 				SourcePtr + (static_cast<int64>(Row) * SourceRowBytes),
-				DestRowBytes);
+				DestRowBytes * sizeof(float));
 		}
 	
 		Readback->Unlock();
@@ -259,7 +273,7 @@ void FBlurSceneViewExtension::ProcessReadback()
 		Readback.Reset();
 	}
 	
-	TFunction<void(TArray64<uint8>&, FIntPoint&)> LocalCallback = CallbackFunction;
+	TFunction<void(TArray64<float>&, FIntPoint&)> LocalCallback = CallbackFunction;
 	FIntPoint LocalExtent = ReadbackTextureExtent;
 	// When it's done, return the results to the callback function
 	AsyncTask(ENamedThreads::GameThread, [PixelData = MoveTemp(PixelData), LocalExtent, Callback = MoveTemp(LocalCallback)]() mutable

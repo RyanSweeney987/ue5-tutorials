@@ -22,12 +22,12 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API FBlurSceneViewExtension final : public F
 	TWeakObjectPtr<UTexture> SourceTexture;
 	FTextureRHIRef SourceRHITexture = nullptr;
 	
-	TFunction<void(TArray64<uint8>&, FIntPoint&)> CallbackFunction;
+	TFunction<void(TArray64<float>&, FIntPoint&)> CallbackFunction;
 public:
-	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
+	FBlurSceneViewExtension(const FAutoRegister& AutoRegister, const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
 	
 	void QueueBlurRequest_GameThread(UTexture* InTexture, const float InBlurRadius, const bool bInDownloadImmediately = false);
-	void SetCallbackFunction(const TFunction<void(TArray64<uint8>&, FIntPoint&)>& InCallbackFunction);
+	void SetCallbackFunction(const TFunction<void(TArray64<float>&, FIntPoint&)>& InCallbackFunction);
 	
 	//-----------------------------------------------------------------------------------
 	// Scene View Extension Implementation
@@ -44,7 +44,7 @@ public:
 	// virtual void PreRenderBasePass_RenderThread(FRDGBuilder& GraphBuilder, bool bDepthBufferIsPopulated) {}
 	// virtual void PostRenderBasePassDeferred_RenderThread(FRDGBuilder& GraphBuilder, FSceneView& InView, const FRenderTargetBindingSlots& RenderTargets, TRDGUniformBufferRef<FSceneTextureUniformParameters> SceneTextures) {}
 	// virtual void PostRenderBasePassMobile_RenderThread(FRHICommandList& RHICmdList, FSceneView& InView) {}
-	virtual void PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& InView, const FPostProcessingInputs& Inputs) override final;
+	virtual void PrePostProcessPass_RenderThread(FRDGBuilder& GraphBuilder, const FSceneView& InView, const FPostProcessingInputs& Inputs) override;
 
 	// virtual void SubscribeToPostProcessingPass(EPostProcessingPass Pass, const FSceneView& InView, FAfterPassCallbackDelegateArray& InOutPassCallbacks, bool bIsPassEnabled) override;
 

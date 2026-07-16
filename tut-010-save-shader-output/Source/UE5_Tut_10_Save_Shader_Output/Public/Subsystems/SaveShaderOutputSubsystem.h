@@ -17,7 +17,7 @@ class UE5_TUT_10_SAVE_SHADER_OUTPUT_API USaveShaderOutputSubsystem : public UEng
 	
 	TSharedPtr<FBlurSceneViewExtension, ESPMode::ThreadSafe> SceneViewExtension;
 	
-	DECLARE_DELEGATE_TwoParams(FOnReadbackComplete, const TArray64<uint8>&, const FIntPoint& Extent);
+	DECLARE_DELEGATE_TwoParams(FOnReadbackComplete, const TArray64<float>&, const FIntPoint& Extent);
 	FOnReadbackComplete OnReadbackCompleteDelegate;
 public:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;

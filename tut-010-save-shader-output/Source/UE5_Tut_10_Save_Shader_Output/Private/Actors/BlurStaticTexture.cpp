@@ -51,7 +51,7 @@ void ABlurStaticTexture::RunBlur()
  * @param PixelData 
  * @param Extent 
  */
-void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& PixelData, const FIntPoint& Extent)
+void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<float>& PixelData, const FIntPoint& Extent)
 {
 	if (PixelData.IsEmpty())
 	{
@@ -92,9 +92,10 @@ void ABlurStaticTexture::SaveTextureAssetFromReadback(const TArray64<uint8>& Pix
 	}
 	
 	NewTexture->MipGenSettings = TMGS_NoMipmaps;
-	NewTexture->CompressionSettings = TC_Default;
-	NewTexture->SRGB = true;
-	NewTexture->Source.Init(Extent.X, Extent.Y, 1, 1, SourceFormat, PixelData.GetData());
+	NewTexture->CompressionSettings = TC_HDR_F32;
+	NewTexture->SRGB = false;
+	NewTexture->Source.Init(Extent.X, Extent.Y, 1, 1, 
+		TSF_RGBA32F, reinterpret_cast<const uint8*>(PixelData.GetData()));
 	NewTexture->UpdateResource();
 
 	FAssetRegistryModule::AssetCreated(NewTexture);

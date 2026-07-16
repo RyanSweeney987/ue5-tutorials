@@ -53,14 +53,14 @@ static const float2 Offsets5x5[25] =
 
 float4 MainPS(float4 SvPosition : SV_POSITION) : SV_Target0
 {
-	float4 Result = float4(0.0, 0.0, 0.0, 0.0);
+	float3 Result = float3(0.0, 0.0, 0.0);
 
 	UNROLL
 	for (int i = 0; i < KERNEL_SIZE; ++i)
 	{
 		float2 SamplePositionUV = (SvPosition.xy + KERNEL_OFFSETS[i]) * TexelSize;
-		Result += InputTexture.SampleLevel(InputSampler, SamplePositionUV, 0) * KERNEL_WEIGHTS[i];
+		Result += InputTexture.SampleLevel(InputSampler, SamplePositionUV, 0).rgb * KERNEL_WEIGHTS[i];
 	}
 
-	return saturate(Result);
+	return float4(saturate(Result), 1.0f);
 }
