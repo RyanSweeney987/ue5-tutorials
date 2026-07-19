@@ -91,7 +91,8 @@ void AShaderExecutor::RunColourExtractRenderPass()
     SceneCaptureComponent->CaptureSource = ESceneCaptureSource::SCS_FinalColorLDR;
     SceneCaptureComponent->CaptureScene();
 	// Flush here so we can get the scene capture results immediately for use later on
-	// This will hold up the game thread until the render thread has finished executing the capture commands
+	// Edit: It doesn't force the CPU to wait for the GPU, it does make it so that all current render commands are ready to be rendered
+	// To force a full wait on the GPU, look at UE5_Tut_10_Save_Sahder_Output
     FlushRenderingCommands();
 
 	// Get the underlying resources so we can get the RHI texture references for the render pass.
@@ -160,7 +161,6 @@ void AShaderExecutor::RunColourExtractRenderPass()
 			GraphBuilder.Execute();
 		});
 
-	// Like before we need to flush the render commands so that the render thread has finished executing the colour extract pass
 	FlushRenderingCommands();
 #else
 	UE_LOG(LogShaderExecutor, Warning, TEXT("RunColourExtractRenderPass is editor-only."));
