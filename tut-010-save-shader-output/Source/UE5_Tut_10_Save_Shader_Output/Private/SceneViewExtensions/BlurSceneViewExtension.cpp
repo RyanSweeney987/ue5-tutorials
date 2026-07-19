@@ -214,7 +214,6 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 				// Force all queued GPU work (including the copy) to complete now
 				RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
 				RHICmdList.BlockUntilGPUIdle();
-		    	// Like using FlushRenderingCommands() if using ENQUEUE_RENDER_COMMANDS on the game thread
 	
 				ProcessReadback();
 				ReadbackTextureExtent = FIntPoint::ZeroValue;
