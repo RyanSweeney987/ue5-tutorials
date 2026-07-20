@@ -206,15 +206,17 @@ void FBlurSceneViewExtension::PrePostProcessPass_RenderThread(
 	{
 		// If immediate fetch is enabled, process it straight away, otherwise we check if it's ready 
 		// at the beginning of the function which runs every frame when enabled
+		// Can use this when using ENQUEUE_RENDER_COMMANDS too
 		GraphBuilder.AddPass(
 		    RDG_EVENT_NAME("BlurReadbackSync"),
 		    ERDGPassFlags::None,
 		    [this](FRHICommandListImmediate& RHICmdList)
 		    {
-				// Force all queued GPU work (including the copy) to complete now
+				// Force all queued GPU work (including the copy) to complete now amd block progress until it's done
 				RHICmdList.ImmediateFlush(EImmediateFlushType::FlushRHIThreadFlushResources);
-				RHICmdList.BlockUntilGPUIdle();
-	
+				// RHICmdList.BlockUntilGPUIdle(); Supposed to be deprecated from 5.3 but deprecation commented out
+		    	RHICmdList.SubmitAndBlockUntilGPUIdle();
+		    	
 				ProcessReadback();
 				ReadbackTextureExtent = FIntPoint::ZeroValue;
 				bHasPendingReadback = false;
