@@ -83,6 +83,8 @@ git clone -b tut-007-customise-detail-panels --single-branch https://github.com/
 git clone -b tut-008-shader-permutations --single-branch https://github.com/RyanSweeney987/ue5-tutorials.git
 ```
 </details>
+
+<details>
 <summary>009 - Immediate Shader Execution</summary>
   
   [YouTube Video](https://youtu.be/BkYcD-w2HfQ)
@@ -90,6 +92,8 @@ git clone -b tut-008-shader-permutations --single-branch https://github.com/Ryan
 git clone -b tut-009-immediate-shader --single-branch https://github.com/RyanSweeney987/ue5-tutorials.git
 ```
 </details>
+
+<details>
 <summary>010 - Save Shader Output</summary>
   
   [YouTube Video](https://youtu.be/2gLDLKkrbsc)
