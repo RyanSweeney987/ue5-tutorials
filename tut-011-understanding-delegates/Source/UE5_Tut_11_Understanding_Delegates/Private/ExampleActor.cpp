@@ -1,0 +1,64 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "ExampleActor.h"
+
+
+void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
+{
+	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegate CPP"));
+	
+	InMyDynamicDelegate.ExecuteIfBound();
+}
+
+// Executes the bound function
+int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+{	
+	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegateReturnFunc CPP"));
+	
+	if(InDynamicDelegateWithReturnValue.IsBound())
+	{
+		return InDynamicDelegateWithReturnValue.Execute();
+	}
+	
+	return 2;
+}
+
+void AExampleActor::SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+{
+	UE_LOG(LogTemp, Warning, TEXT("SetDynamicDelegateReturnFunc CPP"));
+	
+	MyDynamicDelegateReturnDelegate = InDynamicDelegateWithReturnValue;
+}
+
+int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
+{
+	UE_LOG(LogTemp, Warning, TEXT("ExecuteStoredDynamicDelegateReturnFunc CPP"));
+	
+	if (MyDynamicDelegateReturnDelegate.IsBound())
+	{
+		return MyDynamicDelegateReturnDelegate.Execute();
+	}
+
+	return 4;
+}
+
+// Sets default values
+AExampleActor::AExampleActor()
+{
+	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+}
+
+// Called when the game starts or when spawned
+void AExampleActor::BeginPlay()
+{
+	Super::BeginPlay();
+	
+}
+
+// Called every frame
+void AExampleActor::Tick(float DeltaTime)
+{
+	Super::Tick(DeltaTime);
+}
