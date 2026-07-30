@@ -8,14 +8,16 @@ void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegate CPP"));
 	
+	// Executes the bound event if it has been bound
 	InMyDynamicDelegate.ExecuteIfBound();
 }
 
-// Executes the bound function
 int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
 {	
 	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegateReturnFunc CPP"));
 	
+	// Execute the bound event if it has been bound
+	// This type has no "ExecuteIfBound" function so check separately
 	if(InDynamicDelegateWithReturnValue.IsBound())
 	{
 		return InDynamicDelegateWithReturnValue.Execute();

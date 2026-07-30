@@ -16,12 +16,17 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	
 	// TDelegate and TMulticastDelegate are the underlying classes used in the macros
 	// Macros use typedef
-	TDelegate<void()> BaseDelegate;
-	TMulticastDelegate<void()> BaseMulticastDelegate;
+	// 
+	// TDelegate<void()> BaseDelegate;
+	// TMulticastDelegate<void()> BaseMulticastDelegate;
+	// 
+	// --------------------------------------------------------
+	// 
 	// TBaseDynamicDelegate and TBaseDynamicMulticastDelegate are the base for blueprint exposed dynamic delegates
 	// Macros extend these types
-	TBaseDynamicDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicDelegate;
-	TBaseDynamicMulticastDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicMulticastDelegate;
+	// 
+	// TBaseDynamicDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicDelegate;
+	// TBaseDynamicMulticastDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicMulticastDelegate;
 	
 	// Native - faster
 	// Single binding
@@ -59,28 +64,30 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	FTSSimpleMulticastDelegate SimpleThreadSafeMulticastDelegate;
 	
 private:
-	FMyDynamicDelegate MyDynamicDelegate;
+	// Store an event callback, set with the SetDynamicDelegateReturnFunc
+	UPROPERTY(BlueprintReadWrite, Category="Delegates Params CPP", meta=(AllowPrivateAccess = "true"))
 	FMyDynamicDelegateWithReturnValue MyDynamicDelegateReturnDelegate;
 	
 public:
-	UFUNCTION(BlueprintCallable, Category="Delegates")
+	// Can call in BP, runs the function and triggers the bound event as a kind of callback
+	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	void DynamicDelegateFunc(FMyDynamicDelegate MyDynamicDelegate);
 	
-	// UFUNCTION(BlueprintReadWrite, Category="Delegates")
-	// FMyDynamicDelegate MyDynamicDelegate;
-	
-	UPROPERTY(BlueprintAssignable, Category="Delegates")
+	// Normal event binding
+	UPROPERTY(BlueprintAssignable, Category="Delegates CPP")
 	FMyDynamicMulticastDelegate MyDynamicMulticastDelegate;
 	
-	UFUNCTION(BlueprintCallable, Category="Delegates")
+	// Same as DynamicDelegateFunc but includes a return value
+	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	int32 DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
 
-	UFUNCTION(BlueprintCallable, Category="Delegates")
+	// Can set and store an event callback
+	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	void SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
 
-	UFUNCTION(BlueprintCallable, Category="Delegates")
+	// Trigger a stored event callback
+	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	int32 ExecuteStoredDynamicDelegateReturnFunc();
-	
 public:
 	// Sets default values for this actor's properties
 	AExampleActor();
