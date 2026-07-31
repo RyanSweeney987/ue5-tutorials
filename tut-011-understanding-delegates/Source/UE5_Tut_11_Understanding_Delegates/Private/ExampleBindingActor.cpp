@@ -24,6 +24,15 @@ AExampleBindingActor::AExampleBindingActor()
 	PrimaryActorTick.bCanEverTick = false;
 }
 
+AExampleBindingActor::~AExampleBindingActor()
+{
+	// Clear our memory
+	delete RawBindingActor;
+	RawBindingActor = nullptr;
+	
+	SharedBindingActor.Reset();
+}
+
 // Called when the game starts or when spawned
 void AExampleBindingActor::BeginPlay()
 {
@@ -57,9 +66,11 @@ void AExampleBindingActor::BeginPlay()
 		return;
 	}
 	
-	WeakSharedBindingActor = new FRawClass();
+	// Create these types for the examples
+	RawBindingActor = new FRawClass();
 	SharedBindingActor = MakeShared<FSharedClass>();
 	
+	// Initiate the binding ritual
 	BindDelegates(ExampleActor);
 	BindDynamicDelegates(ExampleActor);
 }
@@ -89,11 +100,21 @@ void AExampleBindingActor::BindDelegates(AExampleActor* InActor)
 	InActor->ExampleDelegate.BindUObject(this, &AExampleBindingActor::UObjectBinding);
 	InActor->ExampleDelegate.BindUFunction(this, FName("UFunctionBinding"));
 
+	
+	if(!RawBindingActor)
+	{
+		return;
+	} 
+	
 	// Standard C++ object ptr
-	InActor->ExampleDelegate.BindRaw(WeakSharedBindingActor, &FRawClass::RawFunctionBinding);
+	InActor->ExampleDelegate.BindRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
+	
+	if(!SharedBindingActor)
+	{
+		return;
+	}
 	// Get the underlying ptr
 	InActor->ExampleDelegate.BindRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
-	
 	// Shared ref - can get from TSharedPtr
 	InActor->ExampleDelegate.BindSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
 }
@@ -121,7 +142,7 @@ void AExampleBindingActor::BindDynamicDelegates(AExampleActor* InActor)
 	InActor->SimpleMulticastDelegate.AddUFunction(this, FName("UFunctionBinding"));
 
 	// Standard C++ object ptr
-	InActor->SimpleMulticastDelegate.AddRaw(WeakSharedBindingActor, &FRawClass::RawFunctionBinding);
+	InActor->SimpleMulticastDelegate.AddRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
 	// Get the underlying ptr
 	InActor->SimpleMulticastDelegate.AddRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
 	

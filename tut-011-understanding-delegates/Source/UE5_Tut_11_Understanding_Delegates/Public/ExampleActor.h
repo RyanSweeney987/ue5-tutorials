@@ -19,18 +19,11 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	// 
 	// TDelegate<void()> BaseDelegate;
 	// TMulticastDelegate<void()> BaseMulticastDelegate;
-	// 
-	// --------------------------------------------------------
-	// 
-	// TBaseDynamicDelegate and TBaseDynamicMulticastDelegate are the base for blueprint exposed dynamic delegates
-	// Macros extend these types
-	// 
-	// TBaseDynamicDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicDelegate;
-	// TBaseDynamicMulticastDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicMulticastDelegate;
 	
 	// Native - faster
 	// Single binding
 	DECLARE_DELEGATE(FMyDelegate)
+	// DECLARE_DELEGATE_OneParam(FMyDelegate, FParamType);
 	// Multiple bindings
 	DECLARE_MULTICAST_DELEGATE(FMyMulticastDelegate)
 	DECLARE_TS_MULTICAST_DELEGATE(FMyThreadSafeMulticastDelegate)
@@ -43,6 +36,14 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	// Return type - delegate name type - input parameter
 	// Bound functions must have the appropriate return type and input parameters
 	// DECLARE_DELEGATE_RetVal_OneParam(int32, FMyDelegateWithReturnValueAndOneParam, int32);
+	
+	// --------------------------------------------------------
+		
+	// TBaseDynamicDelegate and TBaseDynamicMulticastDelegate are the base for blueprint exposed dynamic delegates
+	// Macros extend these types
+	// 
+	// TBaseDynamicDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicDelegate;
+	// TBaseDynamicMulticastDelegate<FNotThreadSafeDelegateMode, void()> BaseDynamicMulticastDelegate;
 	
 	// Serialisation/blueprint aware
 	// Single binding
@@ -72,15 +73,16 @@ public:
 	FTSSimpleMulticastDelegate SimpleThreadSafeMulticastDelegate;
 	
 	// Store an event callback, set with the SetDynamicDelegateReturnFunc
+	// Can't access this parameter in the BP
 	UPROPERTY(BlueprintReadWrite, Category="Delegates Params CPP")
 	FMyDynamicDelegateWithReturnValue MyDynamicDelegateReturnDelegate;
 	
 public:
-	// Can call in BP, runs the function and triggers the bound event as a kind of callback
+	// Can call in BP, runs the function and triggers the bound event as a kind of callback if one is bound
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	void DynamicDelegateFunc(FMyDynamicDelegate MyDynamicDelegate);
 	
-	// Normal event binding
+	// Normal event binding, shows up like the other events such as BeginPlay in BP
 	UPROPERTY(BlueprintAssignable, Category="Delegates CPP")
 	FMyDynamicMulticastDelegate MyDynamicMulticastDelegate;
 	
@@ -88,11 +90,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	int32 DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
 
-	// Can set and store an event callback
+	// Set a dynamic delegate to be executed later
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	void SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
 
-	// Trigger a stored event callback
+	// Trigger the set dynamic delegate
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	int32 ExecuteStoredDynamicDelegateReturnFunc();
 	

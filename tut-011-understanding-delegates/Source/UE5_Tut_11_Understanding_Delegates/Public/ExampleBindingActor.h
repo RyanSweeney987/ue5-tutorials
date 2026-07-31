@@ -25,13 +25,13 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleBindingActor : public AActo
 {
 	GENERATED_BODY()
 
-	FRawClass* WeakSharedBindingActor;
+	FRawClass* RawBindingActor;
 	TSharedPtr<FSharedClass> SharedBindingActor;
 	
 public:
 	// Sets default values for this actor's properties
 	AExampleBindingActor();
-
+	virtual ~AExampleBindingActor() override;
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;

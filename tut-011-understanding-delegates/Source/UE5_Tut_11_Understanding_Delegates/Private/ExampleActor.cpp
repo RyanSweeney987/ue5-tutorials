@@ -56,14 +56,23 @@ void AExampleActor::ExecuteCPPBindings() const
 	SimpleMulticastDelegate.Broadcast();
 	
 	// For use with return values
-	int32 ReturnValue = MyDelegateWithReturnValue.Execute();
+	if(MyDynamicDelegateReturnDelegate.IsBound())
+	{
+		int32 ReturnValue = MyDelegateWithReturnValue.Execute();
+	}
+	
+	// Call the TFunction
+	if(MyFunction)
+	{
+		MyFunction();
+	}
 }
 
 // Sets default values
 AExampleActor::AExampleActor()
 {
 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 }
 
 // Called when the game starts or when spawned
