@@ -37,6 +37,13 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	// Single binding		- return value 
 	DECLARE_DELEGATE_RetVal(int32, FMyDelegateWithReturnValue)
 	
+	// Param must be include in the bound function input parameters
+	// DECLARE_DELEGATE_OneParam(FMyDelegateWithOneParam, int32);
+	
+	// Return type - delegate name type - input parameter
+	// Bound functions must have the appropriate return type and input parameters
+	// DECLARE_DELEGATE_RetVal_OneParam(int32, FMyDelegateWithReturnValueAndOneParam, int32);
+	
 	// Serialisation/blueprint aware
 	// Single binding
 	DECLARE_DYNAMIC_DELEGATE(FMyDynamicDelegate);
@@ -47,7 +54,8 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	
 	// Exists but don't use - consider as deprecated - uses multicast delegate under the hood
 	DECLARE_EVENT(AExampleActor, FMyEvent)
-	
+
+public:
 	// Can save a function for a callback
 	TFunction<void()> MyFunction;
 	
@@ -63,9 +71,8 @@ class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleActor : public AActor
 	FSimpleMulticastDelegate SimpleMulticastDelegate;
 	FTSSimpleMulticastDelegate SimpleThreadSafeMulticastDelegate;
 	
-private:
 	// Store an event callback, set with the SetDynamicDelegateReturnFunc
-	UPROPERTY(BlueprintReadWrite, Category="Delegates Params CPP", meta=(AllowPrivateAccess = "true"))
+	UPROPERTY(BlueprintReadWrite, Category="Delegates Params CPP")
 	FMyDynamicDelegateWithReturnValue MyDynamicDelegateReturnDelegate;
 	
 public:
@@ -88,6 +95,10 @@ public:
 	// Trigger a stored event callback
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
 	int32 ExecuteStoredDynamicDelegateReturnFunc();
+	
+	// Execute the bound CPP bindings from the BP/Editor
+	UFUNCTION(BlueprintCallable, CallInEditor, Category="Delegates CPP")
+	void ExecuteCPPBindings() const;
 public:
 	// Sets default values for this actor's properties
 	AExampleActor();

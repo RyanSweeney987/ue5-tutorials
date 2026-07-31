@@ -45,6 +45,20 @@ int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
 	return 4;
 }
 
+void AExampleActor::ExecuteCPPBindings() const
+{
+	UE_LOG(LogTemp, Warning, TEXT("ExecuteCPPBindings CPP"));
+	
+	// Single binding only delegates
+	ExampleDelegate.ExecuteIfBound();
+	
+	// Multicast delegates
+	SimpleMulticastDelegate.Broadcast();
+	
+	// For use with return values
+	int32 ReturnValue = MyDelegateWithReturnValue.Execute();
+}
+
 // Sets default values
 AExampleActor::AExampleActor()
 {
