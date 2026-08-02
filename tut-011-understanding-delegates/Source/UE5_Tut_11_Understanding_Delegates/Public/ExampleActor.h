@@ -95,8 +95,12 @@ public:
 	void SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
 
 	// Trigger the set dynamic delegate
-	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
+	UFUNCTION(BlueprintCallable, CallInEditor, Category="Delegates CPP")
 	int32 ExecuteStoredDynamicDelegateReturnFunc();
+	
+	// Execute all events bound to the multicast delegate
+	UFUNCTION(BlueprintCallable, CallInEditor, Category="Delegates CPP")
+	void ExecuteMyDynamicMulticastDelegateFunc();
 	
 	// Execute the bound CPP bindings from the BP/Editor
 	UFUNCTION(BlueprintCallable, CallInEditor, Category="Delegates CPP")

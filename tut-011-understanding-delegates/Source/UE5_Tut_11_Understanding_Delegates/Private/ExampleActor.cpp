@@ -6,7 +6,7 @@
 
 void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
 {
-	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegate CPP"));
+	UE_LOG(LogTemp, Warning, TEXT("Call DynamicDelegate CPP"));
 	
 	// Executes the bound event if it has been bound
 	InMyDynamicDelegate.ExecuteIfBound();
@@ -14,7 +14,7 @@ void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
 
 int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
 {	
-	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegateReturnFunc CPP"));
+	UE_LOG(LogTemp, Warning, TEXT("Call DynamicDelegateReturnFunc CPP"));
 	
 	// Execute the bound event if it has been bound
 	// This type has no "ExecuteIfBound" function so check separately
@@ -28,14 +28,14 @@ int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue
 
 void AExampleActor::SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
 {
-	UE_LOG(LogTemp, Warning, TEXT("SetDynamicDelegateReturnFunc CPP"));
+	UE_LOG(LogTemp, Warning, TEXT("Set DynamicDelegateReturnFunc CPP"));
 	
 	MyDynamicDelegateReturnDelegate = InDynamicDelegateWithReturnValue;
 }
 
 int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
 {
-	UE_LOG(LogTemp, Warning, TEXT("ExecuteStoredDynamicDelegateReturnFunc CPP"));
+	UE_LOG(LogTemp, Warning, TEXT("Execute Stored DynamicDelegateReturnFunc CPP"));
 	
 	if (MyDynamicDelegateReturnDelegate.IsBound())
 	{
@@ -43,6 +43,16 @@ int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
 	}
 
 	return 4;
+}
+
+void AExampleActor::ExecuteMyDynamicMulticastDelegateFunc()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Execute MyDynamicMulticastDelegate CPP"));
+	
+	if(MyDynamicMulticastDelegate.IsBound())
+	{
+		MyDynamicMulticastDelegate.Broadcast();
+	}
 }
 
 void AExampleActor::ExecuteCPPBindings() const
@@ -56,7 +66,7 @@ void AExampleActor::ExecuteCPPBindings() const
 	SimpleMulticastDelegate.Broadcast();
 	
 	// For use with return values
-	if(MyDynamicDelegateReturnDelegate.IsBound())
+	if(MyDelegateWithReturnValue.IsBound())
 	{
 		int32 ReturnValue = MyDelegateWithReturnValue.Execute();
 	}
