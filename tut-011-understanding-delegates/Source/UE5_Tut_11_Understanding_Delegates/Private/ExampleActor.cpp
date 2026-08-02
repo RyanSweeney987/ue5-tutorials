@@ -4,7 +4,7 @@
 #include "ExampleActor.h"
 
 
-void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
+void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate& InMyDynamicDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegate CPP"));
 	
@@ -12,7 +12,7 @@ void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
 	InMyDynamicDelegate.ExecuteIfBound();
 }
 
-int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue& InDynamicDelegateWithReturnValue)
 {	
 	UE_LOG(LogTemp, Warning, TEXT("DynamicDelegateReturnFunc CPP"));
 	
@@ -26,7 +26,7 @@ int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue
 	return 2;
 }
 
-void AExampleActor::SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+void AExampleActor::SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue& InDynamicDelegateWithReturnValue)
 {
 	UE_LOG(LogTemp, Warning, TEXT("SetDynamicDelegateReturnFunc CPP"));
 	

@@ -80,7 +80,7 @@ public:
 public:
 	// Can call in BP, runs the function and triggers the bound event as a kind of callback if one is bound
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
-	void DynamicDelegateFunc(FMyDynamicDelegate MyDynamicDelegate);
+	void DynamicDelegateFunc(FMyDynamicDelegate& MyDynamicDelegate);
 	
 	// Normal event binding, shows up like the other events such as BeginPlay in BP
 	UPROPERTY(BlueprintAssignable, Category="Delegates CPP")
@@ -88,11 +88,11 @@ public:
 	
 	// Same as DynamicDelegateFunc but includes a return value
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
-	int32 DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
+	int32 DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue& InDynamicDelegateWithReturnValue);
 
 	// Set a dynamic delegate to be executed later
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")
-	void SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue);
+	void SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue& InDynamicDelegateWithReturnValue);
 
 	// Trigger the set dynamic delegate
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP")

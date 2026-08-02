@@ -99,7 +99,6 @@ void AExampleBindingActor::BindDelegates(AExampleActor* InActor)
 	});
 	InActor->ExampleDelegate.BindUObject(this, &AExampleBindingActor::UObjectBinding);
 	InActor->ExampleDelegate.BindUFunction(this, FName("UFunctionBinding"));
-
 	
 	if(!RawBindingActor)
 	{
@@ -117,6 +116,9 @@ void AExampleBindingActor::BindDelegates(AExampleActor* InActor)
 	InActor->ExampleDelegate.BindRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
 	// Shared ref - can get from TSharedPtr
 	InActor->ExampleDelegate.BindSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
+	
+	// Static function binding
+	InActor->ExampleDelegate.BindStatic(AExampleBindingActor::StaticFunctionBinding);
 }
 
 void AExampleBindingActor::BindDynamicDelegates(AExampleActor* InActor)
@@ -126,7 +128,6 @@ void AExampleBindingActor::BindDynamicDelegates(AExampleActor* InActor)
 	// All of these bindings will get called because of it being a multicast delegate
 	// Native multicast delegates are bound the same way
 	
-		
 	// General lambda
 	InActor->SimpleMulticastDelegate.AddLambda([]()
 	{
@@ -141,13 +142,25 @@ void AExampleBindingActor::BindDynamicDelegates(AExampleActor* InActor)
 	InActor->SimpleMulticastDelegate.AddUObject(this, &AExampleBindingActor::UObjectBinding);
 	InActor->SimpleMulticastDelegate.AddUFunction(this, FName("UFunctionBinding"));
 
+	if(!RawBindingActor)
+	{
+		return;
+	} 
+	
 	// Standard C++ object ptr
 	InActor->SimpleMulticastDelegate.AddRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
+	
+	if(!SharedBindingActor)
+	{
+		return;
+	}
 	// Get the underlying ptr
 	InActor->SimpleMulticastDelegate.AddRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
-	
 	// Shared ref - can get from TSharedPtr
 	InActor->SimpleMulticastDelegate.AddSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
+	
+	// Static function binding
+	InActor->SimpleMulticastDelegate.AddStatic(AExampleBindingActor::StaticFunctionBinding);
 }
 
 void AExampleBindingActor::BindOther(AExampleActor* InActor)
