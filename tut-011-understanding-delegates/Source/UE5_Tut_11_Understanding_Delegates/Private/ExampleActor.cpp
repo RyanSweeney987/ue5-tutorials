@@ -4,7 +4,7 @@
 #include "ExampleActor.h"
 
 
-void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
+void AExampleActor::DynamicDelegateFunc(FSingleBindingDynamicDelegate InMyDynamicDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Call DynamicDelegate CPP"));
 	
@@ -12,7 +12,7 @@ void AExampleActor::DynamicDelegateFunc(FMyDynamicDelegate InMyDynamicDelegate)
 	InMyDynamicDelegate.ExecuteIfBound();
 }
 
-int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+int32 AExampleActor::DynamicDelegateReturnFunc(FSingleBindingDynamicWithReturnValue InDynamicDelegateWithReturnValue)
 {	
 	UE_LOG(LogTemp, Warning, TEXT("Call DynamicDelegateReturnFunc CPP"));
 	
@@ -26,7 +26,7 @@ int32 AExampleActor::DynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue
 	return 2;
 }
 
-void AExampleActor::SetDynamicDelegateReturnFunc(FMyDynamicDelegateWithReturnValue InDynamicDelegateWithReturnValue)
+void AExampleActor::SetDynamicDelegateReturnFunc(FSingleBindingDynamicWithReturnValue InDynamicDelegateWithReturnValue)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Set DynamicDelegateReturnFunc CPP"));
 	
@@ -43,16 +43,6 @@ int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
 	}
 
 	return 4;
-}
-
-void AExampleActor::ExecuteMyDynamicMulticastDelegateFunc()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Execute MyDynamicMulticastDelegate CPP"));
-	
-	if(MyDynamicMulticastDelegate.IsBound())
-	{
-		MyDynamicMulticastDelegate.Broadcast();
-	}
 }
 
 void AExampleActor::ExecuteCPPBindings() const
