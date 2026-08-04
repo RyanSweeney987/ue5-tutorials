@@ -21,7 +21,7 @@ public:
 };
 
 UCLASS()
-class UE5_TUT_11_UNDERSTANDING_DELEGATES_API AExampleBindingActor : public AActor
+class UE5_TUT_11_WHAT_ARE_DELEGATES_API AExampleBindingActor : public AActor
 {
 	GENERATED_BODY()
 

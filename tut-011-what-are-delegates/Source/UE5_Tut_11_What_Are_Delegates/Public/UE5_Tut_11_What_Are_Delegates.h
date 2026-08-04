@@ -4,7 +4,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class FUE5_Tut_11_Understanding_DelegatesModule : public IModuleInterface
+class FUE5_Tut_11_What_Are_DelegatesModule : public IModuleInterface
 {
 public:
 

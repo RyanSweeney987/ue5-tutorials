@@ -2,9 +2,9 @@
 
 using UnrealBuildTool;
 
-public class UE5_Tut_11_Understanding_Delegates : ModuleRules
+public class UE5_Tut_11_What_Are_Delegates : ModuleRules
 {
-	public UE5_Tut_11_Understanding_Delegates(ReadOnlyTargetRules Target) : base(Target)
+	public UE5_Tut_11_What_Are_Delegates(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
 		

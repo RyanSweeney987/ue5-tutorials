@@ -2,7 +2,7 @@
 	"FileVersion": 3,
 	"Version": 1,
 	"VersionName": "1.0",
-	"FriendlyName": "UE5_Tut_11_Understanding_Delegates",
+	"FriendlyName": "UE5_Tut_11_What_Are_Delegates",
 	"Description": "",
 	"Category": "Other",
 	"CreatedBy": "Ryan Sweeney",
@@ -15,7 +15,7 @@
 	"Installed": false,
 	"Modules": [
 		{
-			"Name": "UE5_Tut_11_Understanding_Delegates",
+			"Name": "UE5_Tut_11_What_Are_Delegates",
 			"Type": "Runtime",
 			"LoadingPhase": "Default"
 		}
