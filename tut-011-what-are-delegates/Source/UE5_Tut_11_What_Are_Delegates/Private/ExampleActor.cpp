@@ -4,12 +4,40 @@
 #include "ExampleActor.h"
 
 
+void AExampleActor::BPNativeEvent_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call to BPNativeEvent_Implementation"));
+}
+
 void AExampleActor::DynamicDelegateFunc(FSingleBindingDynamicDelegate InMyDynamicDelegate)
 {
 	UE_LOG(LogTemp, Warning, TEXT("Call DynamicDelegate CPP"));
 	
 	// Executes the bound event if it has been bound
 	InMyDynamicDelegate.ExecuteIfBound();
+}
+
+void AExampleActor::Dynamic2DelegateFunc(FSingleBindingDynamicDelegate MyDynamicDelegate,
+	FSingleBindingDynamicDelegate AnotherDynamicDelegate)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call Dynamic2DelegateFunc CPP"));
+	
+	if(MyDynamicDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("MyDynamicDelegate is bound"));
+		MyDynamicDelegate.Execute();
+	}
+	
+	if(AnotherDynamicDelegate.IsBound())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("AnotherDynamicDelegate is bound"));
+		AnotherDynamicDelegate.Execute();
+	}
+}
+
+void AExampleActor::SetDynamicDelegateFunc(FSingleBindingDynamicDelegate MyDynamicDelegate)
+{
+	SingleBindingDynamicDelegate = MyDynamicDelegate;
 }
 
 int32 AExampleActor::DynamicDelegateReturnFunc(FSingleBindingDynamicWithReturnValue InDynamicDelegateWithReturnValue)
@@ -30,35 +58,45 @@ void AExampleActor::SetDynamicDelegateReturnFunc(FSingleBindingDynamicWithReturn
 {
 	UE_LOG(LogTemp, Warning, TEXT("Set DynamicDelegateReturnFunc CPP"));
 	
-	MyDynamicDelegateReturnDelegate = InDynamicDelegateWithReturnValue;
+	SingleBindingDynamicReturnDelegate = InDynamicDelegateWithReturnValue;
+}
+
+void AExampleActor::ExecuteStoredDynamicDelegateFunc()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Execute Stored DynamicDelegateFunc CPP"));
+	
+	if (SingleBindingDynamicDelegate.IsBound())
+	{
+		SingleBindingDynamicDelegate.Execute();
+	}
 }
 
 int32 AExampleActor::ExecuteStoredDynamicDelegateReturnFunc()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Execute Stored DynamicDelegateReturnFunc CPP"));
 	
-	if (MyDynamicDelegateReturnDelegate.IsBound())
+	if (SingleBindingDynamicReturnDelegate.IsBound())
 	{
-		return MyDynamicDelegateReturnDelegate.Execute();
+		return SingleBindingDynamicReturnDelegate.Execute();
 	}
-
+	
 	return 4;
 }
 
-void AExampleActor::ExecuteCPPBindings() const
+void AExampleActor::ExecuteCPPBindings()
 {
 	UE_LOG(LogTemp, Warning, TEXT("ExecuteCPPBindings CPP"));
 	
 	// Single binding only delegates
-	ExampleDelegate.ExecuteIfBound();
+	SingleBindingDelegate.ExecuteIfBound();
 	
 	// Multicast delegates
-	SimpleMulticastDelegate.Broadcast();
+	MultipleBindingsDelegate.Broadcast();
 	
 	// For use with return values
-	if(MyDelegateWithReturnValue.IsBound())
+	if(SingleBindingWithReturnValue.IsBound())
 	{
-		int32 ReturnValue = MyDelegateWithReturnValue.Execute();
+		int32 ReturnValue = SingleBindingWithReturnValue.Execute();
 	}
 	
 	// Call the TFunction
@@ -66,6 +104,12 @@ void AExampleActor::ExecuteCPPBindings() const
 	{
 		MyFunction();
 	}
+	
+	BPImplementableEvent();
+	int32 Result = BPReturnImplementableEvent();
+	
+	// Call the original name, not the _Implementation version
+	BPNativeEvent();
 }
 
 // Sets default values

@@ -72,7 +72,7 @@ void AExampleBindingActor::BeginPlay()
 	
 	// Initiate the binding ritual
 	BindDelegates(ExampleActor);
-	BindDynamicDelegates(ExampleActor);
+	BindMulticastDelegates(ExampleActor);
 }
 
 // Called every frame
@@ -87,18 +87,18 @@ void AExampleBindingActor::BindDelegates(AExampleActor* InActor)
 	// The shared ref binding should be what runs if it gets executed/broadcasted
 	
 	// General lambda
-	InActor->ExampleDelegate.BindLambda([]()
+	InActor->SingleBindingDelegate.BindLambda([]()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("ExampleDelegate CPP"));
 	});
 	
 	// Requires UObject (this)
-	InActor->ExampleDelegate.BindWeakLambda(this, [this]()
+	InActor->SingleBindingDelegate.BindWeakLambda(this, [this]()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("BindWeakLambda CPP"));
 	});
-	InActor->ExampleDelegate.BindUObject(this, &AExampleBindingActor::UObjectBinding);
-	InActor->ExampleDelegate.BindUFunction(this, FName("UFunctionBinding"));
+	InActor->SingleBindingDelegate.BindUObject(this, &AExampleBindingActor::UObjectBinding);
+	InActor->SingleBindingDelegate.BindUFunction(this, FName("UFunctionBinding"));
 	
 	if(!RawBindingActor)
 	{
@@ -106,61 +106,74 @@ void AExampleBindingActor::BindDelegates(AExampleActor* InActor)
 	} 
 	
 	// Standard C++ object ptr
-	InActor->ExampleDelegate.BindRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
+	InActor->SingleBindingDelegate.BindRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
 	
 	if(!SharedBindingActor)
 	{
 		return;
 	}
 	// Get the underlying ptr
-	InActor->ExampleDelegate.BindRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
+	InActor->SingleBindingDelegate.BindRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
 	// Shared ref - can get from TSharedPtr
-	InActor->ExampleDelegate.BindSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
+	InActor->SingleBindingDelegate.BindSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
 	
 	// Static function binding
-	InActor->ExampleDelegate.BindStatic(AExampleBindingActor::StaticFunctionBinding);
+	InActor->SingleBindingDelegate.BindStatic(AExampleBindingActor::StaticFunctionBinding);
+}
+
+void AExampleBindingActor::BindMulticastDelegates(AExampleActor* InActor)
+{
+	// All of these bindings will get called because of it being a multicast delegate
+	
+	// General lambda
+	InActor->MultipleBindingsDelegate.AddLambda([]()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ExampleDelegate CPP"));
+	});
+	
+	// Requires UObject (this)
+	InActor->MultipleBindingsDelegate.AddWeakLambda(this, [this]()
+	{
+		UE_LOG(LogTemp, Warning, TEXT("BindWeakLambda CPP"));
+	});
+	InActor->MultipleBindingsDelegate.AddUObject(this, &AExampleBindingActor::UObjectBinding);
+	InActor->MultipleBindingsDelegate.AddUFunction(this, FName("UFunctionBinding"));
+
+	if(!RawBindingActor)
+	{
+		return;
+	} 
+	
+	// Standard C++ object ptr
+	InActor->MultipleBindingsDelegate.AddRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
+	
+	if(!SharedBindingActor)
+	{
+		return;
+	}
+	// Get the underlying ptr
+	InActor->MultipleBindingsDelegate.AddRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
+	// Shared ref - can get from TSharedPtr
+	InActor->MultipleBindingsDelegate.AddSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
+	
+	// Static function binding
+	InActor->MultipleBindingsDelegate.AddStatic(AExampleBindingActor::StaticFunctionBinding);
 }
 
 void AExampleBindingActor::BindDynamicDelegates(AExampleActor* InActor)
 {
-	// Dynamic delegates bind like native only delegates
+	// Can only bind UFUNCTIONS
+	InActor->SingleBindingDynamicDelegate.BindUFunction(this, FName("UFunctionBinding"));
+	InActor->SingleBindingDynamicDelegate.BindDynamic(this, &AExampleBindingActor::UFunctionBinding);
+		
+	// Have to use a macro to bind in CPP
+	// Also doesn't like the target function being const
+	InActor->ReadWriteMulticastDelegate.AddDynamic(this, &AExampleBindingActor::UFunctionBinding);
+	InActor->ReadWriteMulticastDelegate.AddUniqueDynamic(this, &AExampleBindingActor::UFunctionBinding);
 	
-	// All of these bindings will get called because of it being a multicast delegate
-	// Native multicast delegates are bound the same way
-	
-	// General lambda
-	InActor->SimpleMulticastDelegate.AddLambda([]()
-	{
-		UE_LOG(LogTemp, Warning, TEXT("ExampleDelegate CPP"));
-	});
-	
-	// Requires UObject (this)
-	InActor->SimpleMulticastDelegate.AddWeakLambda(this, [this]()
-	{
-		UE_LOG(LogTemp, Warning, TEXT("BindWeakLambda CPP"));
-	});
-	InActor->SimpleMulticastDelegate.AddUObject(this, &AExampleBindingActor::UObjectBinding);
-	InActor->SimpleMulticastDelegate.AddUFunction(this, FName("UFunctionBinding"));
-
-	if(!RawBindingActor)
-	{
-		return;
-	} 
-	
-	// Standard C++ object ptr
-	InActor->SimpleMulticastDelegate.AddRaw(RawBindingActor, &FRawClass::RawFunctionBinding);
-	
-	if(!SharedBindingActor)
-	{
-		return;
-	}
-	// Get the underlying ptr
-	InActor->SimpleMulticastDelegate.AddRaw(SharedBindingActor.Get(), &FSharedClass::SharedFunctionBinding);
-	// Shared ref - can get from TSharedPtr
-	InActor->SimpleMulticastDelegate.AddSP(SharedBindingActor.ToSharedRef(), &FSharedClass::SharedFunctionBinding);
-	
-	// Static function binding
-	InActor->SimpleMulticastDelegate.AddStatic(AExampleBindingActor::StaticFunctionBinding);
+	// Like a normal multicast delegate
+	InActor->MultipleBindingDynamicSparseDelegate.AddDynamic(this, &AExampleBindingActor::USparseFunctionBinding);
+	InActor->MultipleBindingDynamicSparseDelegate.AddUniqueDynamic(this, &AExampleBindingActor::USparseFunctionBinding);
 }
 
 void AExampleBindingActor::BindOther(AExampleActor* InActor)
@@ -188,9 +201,14 @@ void AExampleBindingActor::UObjectBinding() const
 	UE_LOG(LogTemp, Warning, TEXT("UObjectBinding CPP"));
 }
 
-void AExampleBindingActor::UFunctionBinding() const
+void AExampleBindingActor::UFunctionBinding()
 {
 	UE_LOG(LogTemp, Warning, TEXT("UFunctionBinding CPP"));
+}
+
+void AExampleBindingActor::USparseFunctionBinding(AExampleActor* ExampleActor)
+{
+	
 }
 
 void AExampleBindingActor::StaticFunctionBinding()

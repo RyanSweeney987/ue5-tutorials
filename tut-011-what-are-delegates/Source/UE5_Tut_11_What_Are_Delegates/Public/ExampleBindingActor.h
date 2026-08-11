@@ -41,6 +41,7 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	
 	void BindDelegates(AExampleActor* InActor);
+	void BindMulticastDelegates(AExampleActor* InActor);
 	void BindDynamicDelegates(AExampleActor* InActor);
 	void BindOther(AExampleActor* InActor);
 	
@@ -48,7 +49,10 @@ public:
 	void UObjectBinding() const;
 	
 	UFUNCTION(BlueprintCallable)
-	void UFunctionBinding() const;
+	void UFunctionBinding();
+	
+	UFUNCTION(BlueprintCallable)
+	void USparseFunctionBinding(AExampleActor* ExampleActor);
 	
 	static void StaticFunctionBinding();
 };
