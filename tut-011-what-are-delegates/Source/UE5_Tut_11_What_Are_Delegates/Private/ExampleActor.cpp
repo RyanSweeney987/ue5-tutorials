@@ -4,10 +4,7 @@
 #include "ExampleActor.h"
 
 
-void AExampleActor::BPNativeEvent_Implementation()
-{
-	UE_LOG(LogTemp, Warning, TEXT("Call to BPNativeEvent_Implementation"));
-}
+
 
 void AExampleActor::DynamicDelegateFunc(FSingleBindingDynamicDelegate InMyDynamicDelegate)
 {
@@ -59,6 +56,29 @@ void AExampleActor::SetDynamicDelegateReturnFunc(FSingleBindingDynamicWithReturn
 	UE_LOG(LogTemp, Warning, TEXT("Set DynamicDelegateReturnFunc CPP"));
 	
 	SingleBindingDynamicReturnDelegate = InDynamicDelegateWithReturnValue;
+}
+
+void AExampleActor::SetDynamicOneParamDelegateReturnFunc(
+	FSingleBindingOneParamDynamicWithReturnValue InSingleBindingOneParamDynamicReturnDelegate)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Set DynamicOneParamDelegateReturnFunc CPP"));
+	
+	SingleBindingOneParamDynamicReturnDelegate = InSingleBindingOneParamDynamicReturnDelegate;
+}
+
+void AExampleActor::BPNativeEvent_Implementation()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call to BPNativeEvent_Implementation"));
+}
+
+void AExampleActor::BPNativeValueEvent_Implementation(int32 Value)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Call to BPNativeValueEvent_Implementation with value: %d"), Value);
+}
+
+int32 AExampleActor::BPReturnNativeEvent_Implementation()
+{
+	return 213123123;
 }
 
 void AExampleActor::ExecuteStoredDynamicDelegateFunc()

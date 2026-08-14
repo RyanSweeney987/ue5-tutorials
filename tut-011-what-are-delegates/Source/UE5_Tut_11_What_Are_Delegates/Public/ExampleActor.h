@@ -50,12 +50,13 @@ class UE5_TUT_11_WHAT_ARE_DELEGATES_API AExampleActor : public AActor
 	// Serialisation/blueprint aware dynamic blueprints
 	// Single binding
 	DECLARE_DYNAMIC_DELEGATE(FSingleBindingDynamicDelegate);
-	// DECLARE_DYNAMIC_DELEGATE_OneParam(FSingleBindingDynamicDelegate, ParamName, int32)
-	// DECLARE_DYNAMIC_DELEGATE_TwoParams(FSingleBindingDynamicDelegate, ParamName1, int32, ParamName2, float)
+	// DECLARE_DYNAMIC_DELEGATE_OneParam(FSingleBindingDynamicDelegate, int32, ParamName)
+	// DECLARE_DYNAMIC_DELEGATE_TwoParams(FSingleBindingDynamicDelegate, int32, ParamName1, float, ParamName2)
 	// Multiple bindings
 	DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMultipleBindingsDynamicDelegate);
 	// Single binding		- return value 
 	DECLARE_DYNAMIC_DELEGATE_RetVal(int32, FSingleBindingDynamicWithReturnValue);
+	DECLARE_DYNAMIC_DELEGATE_RetVal_OneParam(float, FSingleBindingOneParamDynamicWithReturnValue, int32, InputKeyParams);
 	
 	// Exists but don't use - consider as deprecated - uses multicast delegate under the hood
 	DECLARE_EVENT(AExampleActor, FMyEvent);
@@ -111,6 +112,7 @@ public:
 	// ------------------------------------------------
 	// Non-BP exposed dynamic delegate are still valid
 	// Single binding multicast delegate
+	// Won't get automatically serialised/garbage collected etc.
 	FSingleBindingDynamicDelegate SingleBindingDynamicDelegate;
 		
 	// Store an event callback, can set with a dedicated setter function
@@ -118,6 +120,9 @@ public:
 	UPROPERTY(BlueprintReadWrite, Category="Delegates CPP|Params|Single")
 	FSingleBindingDynamicWithReturnValue SingleBindingDynamicReturnDelegate;
 		
+	UPROPERTY(BlueprintReadWrite, Category="Delegates CPP|Params|Single")
+	FSingleBindingOneParamDynamicWithReturnValue SingleBindingOneParamDynamicReturnDelegate;
+	
 	// ------------------------------------------------
 	//		Delegates as Function Parameters
 	// ------------------------------------------------
@@ -146,6 +151,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category="Delegates CPP|Functions")
 	void SetDynamicDelegateReturnFunc(FSingleBindingDynamicWithReturnValue InDynamicDelegateWithReturnValue);
 
+	UFUNCTION(BlueprintCallable, Category="Delegates CPP|Functions")
+	void SetDynamicOneParamDelegateReturnFunc(FSingleBindingOneParamDynamicWithReturnValue InSingleBindingOneParamDynamicReturnDelegate);
+	
 	// ------------------------------------------------
 	//		Other delegate/event related stuff
 	// ------------------------------------------------
@@ -155,6 +163,9 @@ public:
 	UFUNCTION(BlueprintImplementableEvent, Category="Delegates CPP|Events")
 	void BPImplementableEvent();
 	
+	UFUNCTION(BlueprintImplementableEvent, Category="Delegates CPP|Events")
+	void BPImplementableValueEvent(int32 Value);
+	
 	// Also don't implement in C++
 	// Appears in function tab, override function to implement
 	UFUNCTION(BlueprintImplementableEvent, Category="Delegates CPP|Events")
@@ -163,6 +174,13 @@ public:
 	// Like BPImplementableEvent but can be provided default functionality
 	UFUNCTION(BlueprintNativeEvent, Category="Delegates CPP|Events")
 	void BPNativeEvent();
+	
+	UFUNCTION(BlueprintNativeEvent, Category="Delegates CPP|Events")
+	void BPNativeValueEvent(int32 Value);
+
+	UFUNCTION(BlueprintNativeEvent, Category="Delegates CPP|Events")
+	int32 BPReturnNativeEvent();
+	
 	
 	// ------------------------------------------------
 	
