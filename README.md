@@ -101,3 +101,10 @@ git clone -b tut-009-immediate-shader --single-branch https://github.com/RyanSwe
 git clone -b tut-010-save-shader-output --single-branch https://github.com/RyanSweeney987/ue5-tutorials.git
 ```
 </details>
+<summary>011 - What Are Delegates?</summary>
+  
+  [YouTube Video](https://youtu.be/O4C2pFeemcw)
+```
+git clone -b tut-011-what-are-delegates --single-branch https://github.com/RyanSweeney987/ue5-tutorials.git
+```
+</details>
